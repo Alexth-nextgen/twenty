@@ -24,7 +24,12 @@ export class ObjectNavigationCommandOnCreateSideEffectHandlerService extends Met
     flatEntity,
     allFlatEntityOperationRecordByMetadataName,
     relatedFlatEntityMaps,
+    context,
   }: BuildSideEffectsArgs<'objectMetadata'>): MetadataSideEffectResult {
+    if (context.buildOptions.shouldCreateObjectNavigationItems === false) {
+      return { status: 'noop' };
+    }
+
     const sourceFlatObjectMetadata = flatEntity as UniversalFlatObjectMetadata &
       Partial<{ id: string }>;
 

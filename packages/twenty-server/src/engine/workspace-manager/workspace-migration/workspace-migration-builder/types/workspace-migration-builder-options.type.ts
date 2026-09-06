@@ -4,4 +4,6 @@ export type WorkspaceMigrationBuilderOptions = {
   inferDeletionFromMissingEntities?: InferDeletionFromMissingEntities;
   isSystemBuild: boolean;
   applicationUniversalIdentifier: string;
+  shouldCreateObjectNavigationItems?: boolean;
+  recordListId?: string;
 };

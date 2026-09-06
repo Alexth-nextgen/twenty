@@ -48,10 +48,12 @@ export const computeSystemViewToCreate = ({
   objectMetadata,
   applicationUniversalIdentifier,
   viewKey,
+  recordListId,
 }: {
   applicationUniversalIdentifier: string;
   objectMetadata: SystemViewObjectMetadata;
   viewKey: SystemViewKey;
+  recordListId?: string;
 }): UniversalFlatView & { id: string } => {
   const { type, icon, computeName } =
     SYSTEM_VIEW_PROPERTIES_BY_VIEW_KEY[viewKey];
@@ -60,6 +62,7 @@ export const computeSystemViewToCreate = ({
   return {
     id: v4(),
     objectMetadataUniversalIdentifier: objectMetadata.universalIdentifier,
+    recordListId: recordListId ?? null,
     name: computeName(objectMetadata),
     // Only INDEX is a persisted key; FIELDS_WIDGET exists solely in the
     // universal identifier derivation.

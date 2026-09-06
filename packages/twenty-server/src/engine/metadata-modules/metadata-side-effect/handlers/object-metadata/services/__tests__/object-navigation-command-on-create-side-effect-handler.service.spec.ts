@@ -47,6 +47,7 @@ const buildArgs = ({
   otherFlatObjectMetadatasInBatch = [],
   pendingFlatCommandMenuItems = [],
   syncedFlatCommandMenuItems = [],
+  shouldCreateObjectNavigationItems = true,
 }: {
   flatObjectMetadata?: ReturnType<typeof buildFlatObjectMetadata>;
   otherFlatObjectMetadatasInBatch?: ReturnType<
@@ -57,6 +58,7 @@ const buildArgs = ({
     universalIdentifier: string;
     position: number;
   }[];
+  shouldCreateObjectNavigationItems?: boolean;
 } = {}): BuildSideEffectsArgs<'objectMetadata'> =>
   ({
     flatEntity: flatObjectMetadata,
@@ -97,7 +99,13 @@ const buildArgs = ({
         ),
       },
     },
-    context: {},
+    context: {
+      buildOptions: {
+        applicationUniversalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
+        isSystemBuild: false,
+        shouldCreateObjectNavigationItems,
+      },
+    },
   }) as unknown as BuildSideEffectsArgs<'objectMetadata'>;
 
 describe('ObjectNavigationCommandOnCreateSideEffectHandlerService', () => {
@@ -203,6 +211,14 @@ describe('ObjectNavigationCommandOnCreateSideEffectHandlerService', () => {
       buildArgs({
         flatObjectMetadata: buildFlatObjectMetadata({ id: undefined }),
       }),
+    );
+
+    expect(result.status).toBe('noop');
+  });
+
+  it('noops when object navigation items are suppressed', () => {
+    const result = handler.buildSideEffects(
+      buildArgs({ shouldCreateObjectNavigationItems: false }),
     );
 
     expect(result.status).toBe('noop');

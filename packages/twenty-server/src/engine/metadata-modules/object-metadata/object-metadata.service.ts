@@ -364,10 +364,14 @@ export class ObjectMetadataService {
     createObjectInput,
     workspaceId,
     ownerFlatApplication,
+    shouldCreateObjectNavigationItems = true,
+    recordListId,
   }: {
     createObjectInput: CreateObjectInput;
     workspaceId: string;
     ownerFlatApplication?: FlatApplication;
+    shouldCreateObjectNavigationItems?: boolean;
+    recordListId?: string;
   }): Promise<FlatObjectMetadata> {
     const { workspaceCustomFlatApplication } =
       await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
@@ -385,14 +389,15 @@ export class ObjectMetadataService {
         flatApplication: resolvedOwnerFlatApplication,
       });
 
-    const flatNavigationMenuItemToCreate =
-      await this.computeFlatNavigationMenuItemToCreate({
-        objectMetadata: flatObjectMetadataToCreate,
-        workspaceId,
-        workspaceCustomApplicationId: workspaceCustomFlatApplication.id,
-        workspaceCustomApplicationUniversalIdentifier:
-          workspaceCustomFlatApplication.universalIdentifier,
-      });
+    const flatNavigationMenuItemToCreate = shouldCreateObjectNavigationItems
+      ? await this.computeFlatNavigationMenuItemToCreate({
+          objectMetadata: flatObjectMetadataToCreate,
+          workspaceId,
+          workspaceCustomApplicationId: workspaceCustomFlatApplication.id,
+          workspaceCustomApplicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
+        })
+      : undefined;
 
     const validateAndBuildResult =
       await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
@@ -425,6 +430,8 @@ export class ObjectMetadataService {
           },
           workspaceId,
           isSystemBuild: false,
+          shouldCreateObjectNavigationItems,
+          recordListId,
           applicationUniversalIdentifier:
             resolvedOwnerFlatApplication.universalIdentifier,
         },

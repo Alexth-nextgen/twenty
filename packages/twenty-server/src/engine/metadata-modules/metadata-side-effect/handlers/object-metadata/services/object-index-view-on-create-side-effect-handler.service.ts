@@ -24,6 +24,7 @@ export class ObjectIndexViewOnCreateSideEffectHandlerService extends MetadataSid
   buildSideEffects({
     flatEntity: sourceFlatObjectMetadata,
     allFlatEntityOperationRecordByMetadataName,
+    context,
   }: BuildSideEffectsArgs<'objectMetadata'>): MetadataSideEffectResult {
     const { applicationUniversalIdentifier } = sourceFlatObjectMetadata;
 
@@ -31,6 +32,7 @@ export class ObjectIndexViewOnCreateSideEffectHandlerService extends MetadataSid
       objectMetadata: sourceFlatObjectMetadata,
       applicationUniversalIdentifier,
       viewKey: SYSTEM_VIEW_KEYS.INDEX,
+      recordListId: context.buildOptions.recordListId,
     });
 
     const flatViewFieldsToCreate = computeSystemViewFieldsForCreatedObjectView({

@@ -1,0 +1,2 @@
+export const CREATE_RECORD_LIST_METADATA_UPGRADE_COMMAND_NAME =
+  '2.39.0_CreateRecordListMetadataFastInstanceCommand_1788693923449';

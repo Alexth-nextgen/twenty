@@ -1,0 +1,127 @@
+import { FieldMetadataService } from 'src/engine/metadata-modules/field-metadata/services/field-metadata.service';
+import { ObjectMetadataService } from 'src/engine/metadata-modules/object-metadata/object-metadata.service';
+import { RecordListEntity } from 'src/engine/metadata-modules/record-list/entities/record-list.entity';
+import { RecordListExceptionCode } from 'src/engine/metadata-modules/record-list/record-list.exception';
+import { RecordListService } from 'src/engine/metadata-modules/record-list/services/record-list.service';
+import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
+
+const WORKSPACE_ID = 'a1a2a3a4-a5a6-4000-8000-000000000001';
+const PARENT_OBJECT_METADATA_ID = 'b1b2b3b4-b5b6-4000-8000-000000000001';
+const ENTRY_OBJECT_METADATA_ID = 'c1c2c3c4-c5c6-4000-8000-000000000001';
+
+describe('RecordListService', () => {
+  const insertAndReturnOne = jest.fn();
+  const findOneWithinWorkspace = jest.fn();
+  const createOneObject = jest.fn();
+  const deleteOneObject = jest.fn();
+  const createOneField = jest.fn();
+
+  const service = new RecordListService(
+    {
+      insertAndReturnOne,
+    } as unknown as WorkspaceScopedRepository<RecordListEntity>,
+    {
+      findOneWithinWorkspace,
+      createOneObject,
+      deleteOneObject,
+    } as unknown as ObjectMetadataService,
+    { createOneField } as unknown as FieldMetadataService,
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    findOneWithinWorkspace.mockResolvedValue({
+      id: PARENT_OBJECT_METADATA_ID,
+      labelSingular: 'Person',
+    });
+    createOneObject.mockResolvedValue({ id: ENTRY_OBJECT_METADATA_ID });
+    createOneField.mockResolvedValue({ id: 'source-record-field-id' });
+    insertAndReturnOne.mockImplementation((workspaceId, recordList) => ({
+      ...recordList,
+      workspaceId,
+    }));
+    deleteOneObject.mockResolvedValue({ id: ENTRY_OBJECT_METADATA_ID });
+  });
+
+  it('creates a navigation-hidden entry object and its source relation', async () => {
+    const recordList = await service.createRecordList({
+      name: 'Recruiting',
+      parentObjectMetadataId: PARENT_OBJECT_METADATA_ID,
+      workspaceId: WORKSPACE_ID,
+    });
+
+    const createObjectArgs = createOneObject.mock.calls[0][0];
+
+    expect(createObjectArgs).toEqual(
+      expect.objectContaining({
+        workspaceId: WORKSPACE_ID,
+        shouldCreateObjectNavigationItems: false,
+        recordListId: expect.any(String),
+      }),
+    );
+    expect(createObjectArgs.createObjectInput.nameSingular).toContain(
+      createObjectArgs.recordListId.replace(/-/g, ''),
+    );
+    expect(createOneField).toHaveBeenCalledWith({
+      workspaceId: WORKSPACE_ID,
+      createFieldInput: expect.objectContaining({
+        name: 'sourceRecord',
+        objectMetadataId: ENTRY_OBJECT_METADATA_ID,
+        isNullable: false,
+        isUnique: false,
+        relationCreationPayload: expect.objectContaining({
+          targetObjectMetadataId: PARENT_OBJECT_METADATA_ID,
+        }),
+      }),
+    });
+    expect(recordList).toEqual(
+      expect.objectContaining({
+        id: createObjectArgs.recordListId,
+        name: 'Recruiting',
+        workspaceId: WORKSPACE_ID,
+        parentObjectMetadataId: PARENT_OBJECT_METADATA_ID,
+        entryObjectMetadataId: ENTRY_OBJECT_METADATA_ID,
+      }),
+    );
+    expect(insertAndReturnOne).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      expect.not.objectContaining({ workspaceId: expect.anything() }),
+    );
+  });
+
+  it('rejects a parent object from outside the workspace', async () => {
+    findOneWithinWorkspace.mockResolvedValue(null);
+
+    await expect(
+      service.createRecordList({
+        name: 'Recruiting',
+        parentObjectMetadataId: PARENT_OBJECT_METADATA_ID,
+        workspaceId: WORKSPACE_ID,
+      }),
+    ).rejects.toMatchObject({
+      code: RecordListExceptionCode.PARENT_OBJECT_NOT_FOUND,
+    });
+
+    expect(createOneObject).not.toHaveBeenCalled();
+  });
+
+  it('removes the entry object when provisioning fails', async () => {
+    const provisioningError = new Error('field creation failed');
+
+    createOneField.mockRejectedValue(provisioningError);
+
+    await expect(
+      service.createRecordList({
+        name: 'Recruiting',
+        parentObjectMetadataId: PARENT_OBJECT_METADATA_ID,
+        workspaceId: WORKSPACE_ID,
+      }),
+    ).rejects.toBe(provisioningError);
+
+    expect(deleteOneObject).toHaveBeenCalledWith({
+      deleteObjectInput: { id: ENTRY_OBJECT_METADATA_ID },
+      workspaceId: WORKSPACE_ID,
+    });
+    expect(insertAndReturnOne).not.toHaveBeenCalled();
+  });
+});

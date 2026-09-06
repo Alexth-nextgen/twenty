@@ -39,6 +39,8 @@ type ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs = {
   allFlatEntityOperationByMetadataName: AllFlatEntityOperationByMetadataName;
   isSystemBuild?: boolean;
   applicationUniversalIdentifier: string;
+  shouldCreateObjectNavigationItems?: boolean;
+  recordListId?: string;
   dryRun?: boolean;
 };
 
@@ -47,6 +49,8 @@ type ValidateBuildAndRunWorkspaceMigrationFromRecordArgs = {
   allFlatEntityOperationRecordByMetadataName: AllFlatEntityOperationRecordByMetadataName;
   isSystemBuild?: boolean;
   applicationUniversalIdentifier: string;
+  shouldCreateObjectNavigationItems?: boolean;
+  recordListId?: string;
   dryRun?: boolean;
 };
 
@@ -211,6 +215,8 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     workspaceId,
     isSystemBuild = false,
     applicationUniversalIdentifier,
+    shouldCreateObjectNavigationItems,
+    recordListId,
     dryRun,
   }: ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs): Promise<
     | WorkspaceMigrationOrchestratorFailedResult
@@ -226,6 +232,8 @@ export class WorkspaceMigrationValidateBuildAndRunService {
       workspaceId,
       isSystemBuild,
       applicationUniversalIdentifier,
+      shouldCreateObjectNavigationItems,
+      recordListId,
       dryRun,
     });
   }
@@ -281,6 +289,8 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     workspaceId,
     isSystemBuild = false,
     applicationUniversalIdentifier,
+    shouldCreateObjectNavigationItems,
+    recordListId,
     dryRun,
     skipSideEffectExpandEngine,
   }: ValidateBuildAndRunWorkspaceMigrationFromRecordInternalArgs): Promise<
@@ -314,7 +324,12 @@ export class WorkspaceMigrationValidateBuildAndRunService {
           allFlatEntityOperationRecordByMetadataName,
           sideEffectRelatedFlatEntityMaps: allRelatedFlatEntityMaps,
           context: {
-            buildOptions: { isSystemBuild, applicationUniversalIdentifier },
+            buildOptions: {
+              isSystemBuild,
+              applicationUniversalIdentifier,
+              shouldCreateObjectNavigationItems,
+              recordListId,
+            },
           },
         });
 
