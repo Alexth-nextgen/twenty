@@ -24,6 +24,33 @@ export class RecordListService {
     private readonly fieldMetadataService: FieldMetadataService,
   ) {}
 
+  async findAll({ workspaceId }: { workspaceId: string }) {
+    return await this.recordListRepository.find(workspaceId, {
+      order: { position: 'ASC', createdAt: 'ASC' },
+    });
+  }
+
+  async findOneOrThrow({
+    id,
+    workspaceId,
+  }: {
+    id: string;
+    workspaceId: string;
+  }) {
+    const recordList = await this.recordListRepository.findOneBy(workspaceId, {
+      id,
+    });
+
+    if (recordList === null) {
+      throw new RecordListException(
+        'Record list not found in workspace',
+        RecordListExceptionCode.RECORD_LIST_NOT_FOUND,
+      );
+    }
+
+    return recordList;
+  }
+
   async createRecordList({
     name,
     icon = null,
@@ -76,7 +103,9 @@ export class RecordListService {
         id: recordListId,
         name,
         icon,
-        position: 0,
+        position:
+          ((await this.recordListRepository.maximum(workspaceId, 'position')) ??
+            -1) + 1,
         parentObjectMetadataId,
         entryObjectMetadataId: entryObjectMetadata.id,
         createdByUserWorkspaceId,
@@ -91,5 +120,50 @@ export class RecordListService {
 
       throw error;
     }
+  }
+
+  async updateRecordList({
+    id,
+    name,
+    icon,
+    position,
+    workspaceId,
+  }: {
+    id: string;
+    name?: string;
+    icon?: string | null;
+    position?: number;
+    workspaceId: string;
+  }) {
+    await this.findOneOrThrow({ id, workspaceId });
+
+    await this.recordListRepository.update(
+      workspaceId,
+      { id },
+      {
+        ...(name !== undefined ? { name } : {}),
+        ...(icon !== undefined ? { icon } : {}),
+        ...(position !== undefined ? { position } : {}),
+      },
+    );
+
+    return await this.findOneOrThrow({ id, workspaceId });
+  }
+
+  async deleteRecordList({
+    id,
+    workspaceId,
+  }: {
+    id: string;
+    workspaceId: string;
+  }) {
+    const recordList = await this.findOneOrThrow({ id, workspaceId });
+
+    await this.objectMetadataService.deleteOneObject({
+      deleteObjectInput: { id: recordList.entryObjectMetadataId },
+      workspaceId,
+    });
+
+    return recordList;
   }
 }

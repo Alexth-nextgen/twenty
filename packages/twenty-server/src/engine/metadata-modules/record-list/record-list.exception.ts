@@ -5,6 +5,7 @@ import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runne
 import { CustomException } from 'src/utils/custom-exception';
 
 export const RecordListExceptionCode = {
+  RECORD_LIST_NOT_FOUND: 'RECORD_LIST_NOT_FOUND',
   PARENT_OBJECT_NOT_FOUND: 'PARENT_OBJECT_NOT_FOUND',
   INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
 } as const;
@@ -16,6 +17,8 @@ const getRecordListExceptionUserFriendlyMessage = (
   code: RecordListExceptionCode,
 ) => {
   switch (code) {
+    case RecordListExceptionCode.RECORD_LIST_NOT_FOUND:
+      return msg`List not found.`;
     case RecordListExceptionCode.PARENT_OBJECT_NOT_FOUND:
       return msg`The selected object could not be found.`;
     case RecordListExceptionCode.INTERNAL_SERVER_ERROR:

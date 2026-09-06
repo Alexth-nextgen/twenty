@@ -163,10 +163,10 @@ resource as success.
 
 ## Permissions
 
-The MVP may ship workspace-visible lists only. Private and restricted lists
-require a dedicated access model with read and edit levels for workspace roles
-or members. View visibility is presentation metadata and must not become the
-authorization boundary.
+The MVP ships workspace-visible lists only. Private and restricted lists are
+explicitly deferred. They require a dedicated access model with read and edit
+levels for workspace roles or members. View visibility is presentation metadata
+and must not become the authorization boundary.
 
 Object and field permissions on the internal entry object can enforce much of
 the data access, but the service must also verify that every referenced source
@@ -237,6 +237,6 @@ The architecture is ready for the backend MVP when all of the following hold:
 2. Whether reverse `sourceRecord` relations should be stored but hidden, or
    represented through a dedicated record-list membership resolver.
 3. The maximum supported lists and list fields per workspace.
-4. The exact list permission subject model.
+4. The exact list permission subject model after the MVP.
 5. Whether entry position is a normal system field or a list-owned ordering
    primitive.

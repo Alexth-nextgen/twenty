@@ -11,6 +11,10 @@ const ENTRY_OBJECT_METADATA_ID = 'c1c2c3c4-c5c6-4000-8000-000000000001';
 
 describe('RecordListService', () => {
   const insertAndReturnOne = jest.fn();
+  const find = jest.fn();
+  const findOneBy = jest.fn();
+  const maximum = jest.fn();
+  const update = jest.fn();
   const findOneWithinWorkspace = jest.fn();
   const createOneObject = jest.fn();
   const deleteOneObject = jest.fn();
@@ -19,6 +23,10 @@ describe('RecordListService', () => {
   const service = new RecordListService(
     {
       insertAndReturnOne,
+      find,
+      findOneBy,
+      maximum,
+      update,
     } as unknown as WorkspaceScopedRepository<RecordListEntity>,
     {
       findOneWithinWorkspace,
@@ -40,6 +48,7 @@ describe('RecordListService', () => {
       ...recordList,
       workspaceId,
     }));
+    maximum.mockResolvedValue(null);
     deleteOneObject.mockResolvedValue({ id: ENTRY_OBJECT_METADATA_ID });
   });
 
@@ -123,5 +132,55 @@ describe('RecordListService', () => {
       workspaceId: WORKSPACE_ID,
     });
     expect(insertAndReturnOne).not.toHaveBeenCalled();
+  });
+
+  it('returns lists in their sidebar order', async () => {
+    find.mockResolvedValue([{ id: 'record-list-id' }]);
+
+    await expect(
+      service.findAll({ workspaceId: WORKSPACE_ID }),
+    ).resolves.toEqual([{ id: 'record-list-id' }]);
+    expect(find).toHaveBeenCalledWith(WORKSPACE_ID, {
+      order: { position: 'ASC', createdAt: 'ASC' },
+    });
+  });
+
+  it('updates only the requested list properties within the workspace', async () => {
+    findOneBy
+      .mockResolvedValueOnce({ id: 'record-list-id', name: 'Recruiting' })
+      .mockResolvedValueOnce({ id: 'record-list-id', name: 'Hiring' });
+
+    await expect(
+      service.updateRecordList({
+        id: 'record-list-id',
+        name: 'Hiring',
+        workspaceId: WORKSPACE_ID,
+      }),
+    ).resolves.toEqual({ id: 'record-list-id', name: 'Hiring' });
+    expect(update).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      { id: 'record-list-id' },
+      { name: 'Hiring' },
+    );
+  });
+
+  it('deletes the internal entry object when deleting a list', async () => {
+    const recordList = {
+      id: 'record-list-id',
+      entryObjectMetadataId: ENTRY_OBJECT_METADATA_ID,
+    };
+
+    findOneBy.mockResolvedValue(recordList);
+
+    await expect(
+      service.deleteRecordList({
+        id: 'record-list-id',
+        workspaceId: WORKSPACE_ID,
+      }),
+    ).resolves.toBe(recordList);
+    expect(deleteOneObject).toHaveBeenCalledWith({
+      deleteObjectInput: { id: ENTRY_OBJECT_METADATA_ID },
+      workspaceId: WORKSPACE_ID,
+    });
   });
 });
