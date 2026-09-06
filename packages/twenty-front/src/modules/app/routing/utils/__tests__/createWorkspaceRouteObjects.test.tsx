@@ -4,6 +4,7 @@ import { createMemoryRouter, matchRoutes } from 'react-router-dom';
 
 import { getWorkspaceRouteObjectsForSurface } from '@/app/routing/utils/getWorkspaceRouteObjectsForSurface';
 import { createWorkspaceRouteObjects } from '@/app/routing/utils/createWorkspaceRouteObjects';
+import { RECORD_LIST_PATH } from '@/record-list/constants/RecordListPath';
 import {
   isWorkspaceLocationAvailableOnSurface,
   isWorkspaceLocationExpandableFromSidePanel,
@@ -44,6 +45,7 @@ describe('workspace route objects', () => {
     expect(panelRoutes.map(({ path }) => path)).toEqual([
       AppPath.RecordIndexPage,
       AppPath.RecordShowPage,
+      RECORD_LIST_PATH,
       SETTINGS_ROOT_PATH,
     ]);
 

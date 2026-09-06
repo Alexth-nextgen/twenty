@@ -10,6 +10,7 @@ import {
 } from '@/app/components/SettingsRoutes';
 import { type WorkspaceRouteObject } from '@/app/routing/types/WorkspaceRouteObject';
 import { RecordIndexSkeletonLoader } from '@/object-record/record-index/components/RecordIndexSkeletonLoader';
+import { RECORD_LIST_PATH } from '@/record-list/constants/RecordListPath';
 
 const WorkflowCoreIndexPage = lazy(() =>
   import('~/pages/object-core/WorkflowCoreIndexPage').then((module) => ({
@@ -26,6 +27,12 @@ const RecordIndexPage = lazy(() =>
 const RecordShowPage = lazy(() =>
   import('~/pages/object-record/RecordShowPage').then((module) => ({
     default: module.RecordShowPage,
+  })),
+);
+
+const RecordListPage = lazy(() =>
+  import('~/pages/record-list/RecordListPage').then((module) => ({
+    default: module.RecordListPage,
   })),
 );
 
@@ -110,6 +117,18 @@ export const createWorkspaceRouteObjects = ({
         </LazyRoute>
       ),
       handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+    },
+    {
+      path: RECORD_LIST_PATH,
+      element: (
+        <LazyRoute fallback={<RecordIndexSkeletonLoader />}>
+          <RecordListPage />
+        </LazyRoute>
+      ),
+      handle: {
+        workspaceSurfaces: MAIN_AND_SIDE_PANEL,
+        isLocationExpandableFromSidePanel: true,
+      },
     },
     {
       path: AppPath.PageLayoutPage,
