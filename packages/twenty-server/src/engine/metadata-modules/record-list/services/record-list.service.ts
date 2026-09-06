@@ -14,6 +14,15 @@ import {
 } from 'src/engine/metadata-modules/record-list/utils/build-record-list-entry-object-input';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
+import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
+
+export type RecordListEntryRecord = {
+  id: string;
+  sourceRecordId: string;
+  position: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @Injectable()
 export class RecordListService {
@@ -22,6 +31,7 @@ export class RecordListService {
     private readonly recordListRepository: WorkspaceScopedRepository<RecordListEntity>,
     private readonly objectMetadataService: ObjectMetadataService,
     private readonly fieldMetadataService: FieldMetadataService,
+    private readonly workspaceOrmManager: WorkspaceOrmManager,
   ) {}
 
   async findAll({ workspaceId }: { workspaceId: string }) {
@@ -165,5 +175,130 @@ export class RecordListService {
     });
 
     return recordList;
+  }
+
+  async findRecordListEntries({
+    recordListId,
+    workspaceId,
+  }: {
+    recordListId: string;
+    workspaceId: string;
+  }): Promise<RecordListEntryRecord[]> {
+    const { entryObjectMetadataNameSingular } =
+      await this.resolveRecordListObjectNames({ recordListId, workspaceId });
+    const entryRepository =
+      this.workspaceOrmManager.getRepository<RecordListEntryRecord>(
+        entryObjectMetadataNameSingular,
+        { shouldBypassPermissionChecks: true },
+      );
+
+    return await entryRepository.find({
+      order: { position: 'ASC', createdAt: 'ASC' },
+    });
+  }
+
+  async addRecordToList({
+    recordListId,
+    sourceRecordId,
+    workspaceId,
+  }: {
+    recordListId: string;
+    sourceRecordId: string;
+    workspaceId: string;
+  }): Promise<RecordListEntryRecord> {
+    const {
+      parentObjectMetadataNameSingular,
+      entryObjectMetadataNameSingular,
+    } = await this.resolveRecordListObjectNames({ recordListId, workspaceId });
+    const parentRepository = this.workspaceOrmManager.getRepository(
+      parentObjectMetadataNameSingular,
+      { shouldBypassPermissionChecks: true },
+    );
+
+    if (!(await parentRepository.existsBy({ id: sourceRecordId }))) {
+      throw new RecordListException(
+        'Source record not found in workspace object',
+        RecordListExceptionCode.SOURCE_RECORD_NOT_FOUND,
+      );
+    }
+
+    const entryRepository =
+      this.workspaceOrmManager.getRepository<RecordListEntryRecord>(
+        entryObjectMetadataNameSingular,
+        { shouldBypassPermissionChecks: true },
+      );
+    const position = (await entryRepository.maximum('position')) ?? -1;
+    const insertResult = await entryRepository.insert({
+      sourceRecordId,
+      position: position + 1,
+    });
+
+    return insertResult.raw[0] as RecordListEntryRecord;
+  }
+
+  async removeRecordFromList({
+    recordListId,
+    entryId,
+    workspaceId,
+  }: {
+    recordListId: string;
+    entryId: string;
+    workspaceId: string;
+  }): Promise<RecordListEntryRecord> {
+    const { entryObjectMetadataNameSingular } =
+      await this.resolveRecordListObjectNames({ recordListId, workspaceId });
+    const entryRepository =
+      this.workspaceOrmManager.getRepository<RecordListEntryRecord>(
+        entryObjectMetadataNameSingular,
+        { shouldBypassPermissionChecks: true },
+      );
+    const entry = await entryRepository.findOneBy({ id: entryId });
+
+    if (entry === null) {
+      throw new RecordListException(
+        'Record list entry not found',
+        RecordListExceptionCode.RECORD_LIST_ENTRY_NOT_FOUND,
+      );
+    }
+
+    await entryRepository.delete(entryId);
+
+    return entry;
+  }
+
+  private async resolveRecordListObjectNames({
+    recordListId,
+    workspaceId,
+  }: {
+    recordListId: string;
+    workspaceId: string;
+  }): Promise<{
+    parentObjectMetadataNameSingular: string;
+    entryObjectMetadataNameSingular: string;
+  }> {
+    const recordList = await this.findOneOrThrow({
+      id: recordListId,
+      workspaceId,
+    });
+    const [parentObjectMetadata, entryObjectMetadata] = await Promise.all([
+      this.objectMetadataService.findOneWithinWorkspace(workspaceId, {
+        where: { id: recordList.parentObjectMetadataId },
+      }),
+      this.objectMetadataService.findOneWithinWorkspace(workspaceId, {
+        where: { id: recordList.entryObjectMetadataId },
+      }),
+    ]);
+
+    if (parentObjectMetadata === null || entryObjectMetadata === null) {
+      throw new RecordListException(
+        'Record list object metadata is incomplete',
+        RecordListExceptionCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    return {
+      parentObjectMetadataNameSingular: parentObjectMetadata.nameSingular,
+      entryObjectMetadataNameSingular: entryObjectMetadata.nameSingular,
+    };
   }
 }

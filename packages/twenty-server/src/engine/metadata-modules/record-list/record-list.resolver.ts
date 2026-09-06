@@ -9,6 +9,8 @@ import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorat
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { CreateRecordListInput } from 'src/engine/metadata-modules/record-list/dtos/create-record-list.input';
+import { AddRecordToListInput } from 'src/engine/metadata-modules/record-list/dtos/add-record-to-list.input';
+import { RecordListEntryDTO } from 'src/engine/metadata-modules/record-list/dtos/record-list-entry.dto';
 import { RecordListDTO } from 'src/engine/metadata-modules/record-list/dtos/record-list.dto';
 import { UpdateRecordListInput } from 'src/engine/metadata-modules/record-list/dtos/update-record-list.input';
 import { RecordListService } from 'src/engine/metadata-modules/record-list/services/record-list.service';
@@ -67,6 +69,41 @@ export class RecordListResolver {
   ): Promise<RecordListDTO> {
     return await this.recordListService.deleteRecordList({
       id,
+      workspaceId: workspace.id,
+    });
+  }
+
+  @Query(() => [RecordListEntryDTO])
+  async recordListEntries(
+    @Args('recordListId', { type: () => UUIDScalarType }) recordListId: string,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<RecordListEntryDTO[]> {
+    return await this.recordListService.findRecordListEntries({
+      recordListId,
+      workspaceId: workspace.id,
+    });
+  }
+
+  @Mutation(() => RecordListEntryDTO)
+  async addRecordToList(
+    @Args('input') input: AddRecordToListInput,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<RecordListEntryDTO> {
+    return await this.recordListService.addRecordToList({
+      ...input,
+      workspaceId: workspace.id,
+    });
+  }
+
+  @Mutation(() => RecordListEntryDTO)
+  async removeRecordFromList(
+    @Args('recordListId', { type: () => UUIDScalarType }) recordListId: string,
+    @Args('entryId', { type: () => UUIDScalarType }) entryId: string,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<RecordListEntryDTO> {
+    return await this.recordListService.removeRecordFromList({
+      recordListId,
+      entryId,
       workspaceId: workspace.id,
     });
   }
