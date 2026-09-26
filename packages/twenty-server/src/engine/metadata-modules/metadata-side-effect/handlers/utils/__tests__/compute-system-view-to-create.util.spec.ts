@@ -15,7 +15,7 @@ const objectMetadata = {
 const recordListId = 'c1c2c3c4-c5c6-4000-8000-000000000001';
 
 describe('computeSystemViewToCreate', () => {
-  it.each([ViewKey.INDEX, SYSTEM_VIEW_KEYS.FIELDS_WIDGET])(
+  it.each([SYSTEM_VIEW_KEYS.INDEX, SYSTEM_VIEW_KEYS.FIELDS_WIDGET])(
     'should derive the %s view universal identifier from the object',
     (viewKey) => {
       const result = computeSystemViewToCreate({

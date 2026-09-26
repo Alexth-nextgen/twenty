@@ -5,7 +5,7 @@ import { RecordListsSection } from '@/record-list/components/RecordListsSection'
 import { styled } from '@linaria/react';
 import { lazy, Suspense } from 'react';
 
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const FavoritesSectionDispatcher = lazy(() =>
   import('@/navigation-menu-item/display/sections/favorites/components/FavoritesSectionDispatcher').then(

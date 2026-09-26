@@ -44,6 +44,19 @@ export const STANDARD_PAGE_LAYOUT_UNIVERSAL_IDENTIFIERS = {
       },
     },
   },
+  attachmentRecordPage: buildStandardObjectRecordPageLayout({
+    objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
+    tabs: {
+      home: {
+        title: 'Home',
+        widgets: {
+          preview: 'Preview',
+          fields: 'Fields',
+          attachedTo: 'Attached to',
+        },
+      },
+    },
+  }),
   companyRecordPage: buildStandardObjectRecordPageLayout({
     objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.company,
     tabs: {
@@ -493,6 +506,17 @@ export const STANDARD_PAGE_LAYOUT_UNIVERSAL_IDENTIFIERS = {
       },
     },
   }),
+  messageRecordPage: buildStandardObjectRecordPageLayout({
+    objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.message,
+    tabs: {
+      home: {
+        title: 'Home',
+        widgets: {
+          fields: 'Fields',
+        },
+      },
+    },
+  }),
   messageThreadRecordPage: buildStandardObjectRecordPageLayout({
     objectUniversalIdentifier:
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.messageThread,
@@ -513,6 +537,12 @@ export const STANDARD_PAGE_LAYOUT_UNIVERSAL_IDENTIFIERS = {
         title: 'Home',
         widgets: {
           fields: 'Fields',
+          members: 'Members',
+        },
+      },
+      members: {
+        title: 'Members',
+        widgets: {
           members: 'Members',
         },
       },

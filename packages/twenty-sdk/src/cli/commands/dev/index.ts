@@ -8,6 +8,7 @@ import { AppDevCommand } from './dev';
 import { AppDevOnceCommand } from './dev-once';
 import { registerDevFunctionCommands } from './function';
 import { AppGenerateClientCommand } from './generate-client';
+import { AppPullCommand } from './pull';
 import { AppTranslationsExtractCommand } from './translations-extract';
 import { AppTypecheckCommand } from './typecheck';
 
@@ -15,6 +16,7 @@ export const registerDevCommands = (program: Command): void => {
   const buildCommand = new AppBuildCommand();
   const devCommand = new AppDevCommand();
   const devOnceCommand = new AppDevOnceCommand();
+  const pullCommand = new AppPullCommand();
   const typecheckCommand = new AppTypecheckCommand();
   const addCommand = new EntityAddCommand();
   const generateClientCommand = new AppGenerateClientCommand();
@@ -147,6 +149,29 @@ export const registerDevCommands = (program: Command): void => {
     );
 
   program
+    .command('pull [appPath]')
+    .description(
+      'Write the installed application back to local source files (experimental)',
+    )
+    .option(
+      '-u, --universal-identifier <id>',
+      'Universal identifier of the application to pull',
+    )
+    .option('-v, --verbose', 'Show detailed logs')
+    .action(
+      async (
+        appPath: string | undefined,
+        options: { universalIdentifier?: string; verbose?: boolean },
+      ) => {
+        await pullCommand.execute({
+          appPath: formatPath(appPath),
+          universalIdentifier: options.universalIdentifier,
+          verbose: options.verbose,
+        });
+      },
+    );
+
+  program
     .command('dev:build [appPath]')
     .description('Build and generate API client')
     .option('--tarball', 'Also pack into a .tgz tarball')
@@ -189,7 +214,7 @@ export const registerDevCommands = (program: Command): void => {
   program
     .command('dev:generate-client [appPath]')
     .description(
-      'Generate the typed API client from the active remote (no app definition required)',
+      'Generate the typed API client for the built app from the active remote',
     )
     .action(async (appPath) => {
       await generateClientCommand.execute({

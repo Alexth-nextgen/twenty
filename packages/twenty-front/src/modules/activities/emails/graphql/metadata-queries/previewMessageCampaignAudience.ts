@@ -8,6 +8,7 @@ export const PREVIEW_MESSAGE_CAMPAIGN_AUDIENCE = gql`
       totalMembers
       withoutEmail
       duplicateEmails
+      hardSuppressed
       globallyUnsubscribed
       topicUnsubscribed
       sendable
