@@ -1,0 +1,71 @@
+{
+  "universalIdentifier": "ac8f2b7a-15d3-47fa-a06c-2bfc6d85ec72",
+  "displayName": "Lists",
+  "version": "1.0.0",
+  "hostCapability": "native-app-host@^1",
+  "serverModule": "record-list.module",
+  "serverExport": "RecordListModule",
+  "entities": ["entities/record-list.entity"],
+  "routes": [
+    {
+      "path": "/lists/:recordListId",
+      "module": "RecordListPage",
+      "export": "RecordListPage"
+    }
+  ],
+  "navigation": [
+    {
+      "id": "lists",
+      "module": "components/RecordListsSection",
+      "export": "RecordListsSection",
+      "position": 10000
+    }
+  ],
+  "recordSections": [
+    {
+      "id": "memberships",
+      "module": "components/RecordListMembershipsSection",
+      "export": "RecordListMembershipsSection",
+      "objectNames": ["person", "company"],
+      "position": 100
+    }
+  ],
+  "commands": [
+    {
+      "key": "94bb66e8-8284-4ba2-af8b-d31ecb345317",
+      "module": "AddRecordsToListCommand",
+      "export": "AddRecordsToListCommand",
+      "label": "Add to list",
+      "shortLabel": "Add to list",
+      "icon": "IconPlaylistAdd",
+      "position": 11.5,
+      "isPinned": true,
+      "availabilityType": "RECORD_SELECTION",
+      "conditionalAvailabilityExpression": "not isSelectAll and numberOfSelectedRecords >= 1 and (objectMetadataItem.nameSingular == \"person\" or objectMetadataItem.nameSingular == \"company\")"
+    },
+    {
+      "key": "1f9d6ca3-80f6-4d9c-a120-88ca6b778a21",
+      "module": "RemoveRecordsFromListCommand",
+      "export": "RemoveRecordsFromListCommand",
+      "label": "Remove from list",
+      "shortLabel": "Remove from list",
+      "icon": "IconTrash",
+      "position": 12,
+      "isPinned": true,
+      "availabilityType": "RECORD_SELECTION",
+      "conditionalAvailabilityExpression": "pageType == \"INDEX_PAGE\" and not isSelectAll and numberOfSelectedRecords >= 1 and startsWith(objectMetadataItem.nameSingular, \"recordListEntry\")"
+    },
+    {
+      "key": "2e662e67-aed3-4e56-92d7-752cf2677981",
+      "module": "BulkRemoveRecordsFromListCommand",
+      "export": "BulkRemoveRecordsFromListCommand",
+      "label": "Remove from list",
+      "shortLabel": "Remove from list",
+      "icon": "IconTrash",
+      "position": 12.5,
+      "isPinned": true,
+      "availabilityType": "RECORD_SELECTION",
+      "conditionalAvailabilityExpression": "pageType == \"INDEX_PAGE\" and not isSelectAll and numberOfSelectedRecords >= 1 and (objectMetadataItem.nameSingular == \"person\" or objectMetadataItem.nameSingular == \"company\")"
+    }
+  ]
+}

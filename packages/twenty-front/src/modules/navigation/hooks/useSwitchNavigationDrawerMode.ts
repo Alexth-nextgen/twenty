@@ -1,6 +1,6 @@
 import { useIsMobile } from 'twenty-ui/utilities';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { SettingsPath } from 'twenty-shared/types';
+import { AppPath, SettingsPath } from 'twenty-shared/types';
 
 import { useReturnFromExpandedAiChat } from '@/ai/hooks/useReturnFromExpandedAiChat';
 import { useSwitchToNewAiChat } from '@/ai/hooks/useSwitchToNewAiChat';
@@ -9,16 +9,16 @@ import { useActiveNavigationDrawerMode } from '@/navigation/hooks/useActiveNavig
 import { useDefaultHomePagePath } from '@/navigation/hooks/useDefaultHomePagePath';
 import { useIsSettingsDrawer } from '@/navigation/hooks/useIsSettingsDrawer';
 import { useIsSettingsPage } from '@/navigation/hooks/useIsSettingsPage';
-import { currentMobileNavigationDrawerState } from '@/navigation/states/currentMobileNavigationDrawerState';
 import { getNavigationDrawerHomeDestination } from '@/navigation/utils/getNavigationDrawerHomeDestination';
+import { currentMobileNavigationDrawerState } from '@/navigation/states/currentMobileNavigationDrawerState';
 import { isNavigationDrawerExpandedState } from '@/ui/navigation/states/isNavigationDrawerExpanded';
 import { navigationDrawerActiveTabState } from '@/ui/navigation/states/navigationDrawerActiveTabState';
 import { navigationDrawerExpandedMemorizedState } from '@/ui/navigation/states/navigationDrawerExpandedMemorizedState';
+import { navigationMemorizedUrlState } from '@/ui/navigation/states/navigationMemorizedUrlState';
 import {
   type NavigationDrawerActiveTab,
   NAVIGATION_DRAWER_TABS,
 } from '@/ui/navigation/states/navigationDrawerTabs';
-import { navigationMemorizedUrlState } from '@/ui/navigation/states/navigationMemorizedUrlState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
@@ -35,10 +35,10 @@ export const useSwitchNavigationDrawerMode = () => {
   const isSettingsPage = useIsSettingsPage();
   const isAiChatPage = isAiChatPath(location.pathname);
 
-  const navigationMemorizedUrl = useAtomStateValue(navigationMemorizedUrlState);
   const navigationDrawerExpandedMemorized = useAtomStateValue(
     navigationDrawerExpandedMemorizedState,
   );
+  const navigationMemorizedUrl = useAtomStateValue(navigationMemorizedUrlState);
   const setIsNavigationDrawerExpanded = useSetAtomState(
     isNavigationDrawerExpandedState,
   );
@@ -81,7 +81,10 @@ export const useSwitchNavigationDrawerMode = () => {
 
     if (isAiChatPage) {
       returnFromExpandedAiChat();
+      return;
     }
+
+    navigate(AppPath.Home);
   };
 
   const switchToAiChat = () => {
@@ -96,7 +99,9 @@ export const useSwitchNavigationDrawerMode = () => {
     switch (mode) {
       case NAVIGATION_DRAWER_TABS.NAVIGATION_MENU:
         if (
-          activeNavigationDrawerMode === NAVIGATION_DRAWER_TABS.NAVIGATION_MENU
+          activeNavigationDrawerMode ===
+            NAVIGATION_DRAWER_TABS.NAVIGATION_MENU &&
+          location.pathname === AppPath.Home
         ) {
           return;
         }

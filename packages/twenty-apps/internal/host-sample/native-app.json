@@ -1,0 +1,39 @@
+{
+  "universalIdentifier": "5f1d0c2e-9a44-4a3b-8f2f-6a1b2c3d4e5f",
+  "displayName": "Native host sample",
+  "version": "1.0.0",
+  "hostCapability": "native-app-host@^1",
+  "serverModule": "host-sample.module",
+  "serverExport": "HostSampleModule",
+  "routes": [
+    {
+      "path": "/native-host-sample",
+      "module": "HostSamplePage",
+      "export": "HostSamplePage"
+    }
+  ],
+  "navigation": [
+    {
+      "id": "native-host-sample",
+      "module": "components/HostSampleNavigationItem",
+      "export": "HostSampleNavigationItem",
+      "position": 200
+    }
+  ],
+  "recordSections": [
+    {
+      "id": "native-host-sample-section",
+      "module": "components/HostSampleRecordSection",
+      "export": "HostSampleRecordSection",
+      "objectNames": ["person", "company"],
+      "position": 200
+    }
+  ],
+  "commands": [
+    {
+      "key": "NATIVE_HOST_SAMPLE",
+      "module": "HostSampleCommand",
+      "export": "HostSampleCommand"
+    }
+  ]
+}

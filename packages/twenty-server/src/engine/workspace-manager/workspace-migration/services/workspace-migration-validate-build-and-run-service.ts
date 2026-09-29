@@ -40,7 +40,6 @@ type ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs = {
   isSystemBuild?: boolean;
   applicationUniversalIdentifier: string;
   shouldCreateObjectNavigationItems?: boolean;
-  recordListId?: string;
   dryRun?: boolean;
 };
 
@@ -50,7 +49,6 @@ type ValidateBuildAndRunWorkspaceMigrationFromRecordArgs = {
   isSystemBuild?: boolean;
   applicationUniversalIdentifier: string;
   shouldCreateObjectNavigationItems?: boolean;
-  recordListId?: string;
   dryRun?: boolean;
 };
 
@@ -216,7 +214,6 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     isSystemBuild = false,
     applicationUniversalIdentifier,
     shouldCreateObjectNavigationItems,
-    recordListId,
     dryRun,
   }: ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs): Promise<
     | WorkspaceMigrationOrchestratorFailedResult
@@ -233,7 +230,6 @@ export class WorkspaceMigrationValidateBuildAndRunService {
       isSystemBuild,
       applicationUniversalIdentifier,
       shouldCreateObjectNavigationItems,
-      recordListId,
       dryRun,
     });
   }
@@ -290,7 +286,6 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     isSystemBuild = false,
     applicationUniversalIdentifier,
     shouldCreateObjectNavigationItems,
-    recordListId,
     dryRun,
     skipSideEffectExpandEngine,
   }: ValidateBuildAndRunWorkspaceMigrationFromRecordInternalArgs): Promise<
@@ -328,7 +323,6 @@ export class WorkspaceMigrationValidateBuildAndRunService {
               isSystemBuild,
               applicationUniversalIdentifier,
               shouldCreateObjectNavigationItems,
-              recordListId,
             },
           },
         });

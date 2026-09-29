@@ -5,6 +5,8 @@ import {
   CommandMenuContext,
   type CommandMenuContextType,
 } from '@/command-menu-item/contexts/CommandMenuContext';
+import { useNativeApplications } from '@/app/native-extension-host/hooks/useNativeApplications';
+import { NATIVE_APP_DEFINITIONS } from '~/native-apps/registry';
 import { commandMenuItemsDraftState } from '@/command-menu-item/edit/states/commandMenuItemsDraftState';
 import { commandMenuItemsSelector } from '@/command-menu-item/states/commandMenuItemsSelector';
 import { doesCommandMenuItemMatchObjectMetadataId } from '@/command-menu-item/utils/doesCommandMenuItemMatchObjectMetadataId';
@@ -81,6 +83,7 @@ export const CommandMenuContextProviderContent = ({
     hasGlobalRecordCreationCommandTemplate;
   const isLayoutCustomizationAllowedOnCurrentPage =
     useIsLayoutCustomizationAllowedOnCurrentPage();
+  const { applications: nativeApplications } = useNativeApplications();
   const commandMenuItemsDraft = useAtomStateValue(commandMenuItemsDraftState);
   const currentPageLayoutId = useAtomStateValue(currentPageLayoutIdState);
   const pageLayoutIdFromContext = useContext(PageLayoutIdContext);
@@ -108,6 +111,21 @@ export const CommandMenuContextProviderContent = ({
       : commandMenuItems;
 
     const contextCommandMenuItems = commandMenuItemsToDisplay
+      .filter((item) => {
+        const owner = NATIVE_APP_DEFINITIONS.find((application) =>
+          application.commands.some(
+            (command) => command.key === item.engineComponentKey,
+          ),
+        );
+        return (
+          !owner ||
+          nativeApplications.some(
+            (application) =>
+              application.universalIdentifier === owner.universalIdentifier &&
+              application.isEnabled,
+          )
+        );
+      })
       .filter(
         (item) =>
           !isCoreWorkflowIndex ||
@@ -158,6 +176,7 @@ export const CommandMenuContextProviderContent = ({
     shouldDisplayGlobalRecordCreationCommands,
     isCoreWorkflow,
     commandMenuItems,
+    nativeApplications,
     commandMenuItemsDraft,
     effectivePageLayoutId,
     isInPreviewMode,

@@ -1,5 +1,9 @@
 import { json2csv } from 'json-2-csv';
 import { useMemo } from 'react';
+import {
+  utils as spreadsheetUtils,
+  write as writeSpreadsheet,
+} from 'xlsx-ugnis';
 
 import { isCompositeFieldType } from '@/object-record/object-filter-dropdown/utils/isCompositeFieldType';
 import { EXPORT_TABLE_DATA_DEFAULT_PAGE_SIZE } from '@/object-record/object-options-dropdown/constants/ExportTableDataDefaultPageSize';
@@ -153,13 +157,63 @@ const downloader = (mimeType: string, generator: GenerateExport) => {
 
 export const csvDownloader = downloader('text/csv', generateCsv);
 
+export const generateXlsx = ({
+  columns,
+  rows,
+}: GenerateExportOptions): ArrayBuffer => {
+  const exportColumns = columns.filter(
+    (column) =>
+      !('relationType' in column.metadata && column.metadata.relationType) ||
+      column.metadata.relationType === RelationType.MANY_TO_ONE,
+  );
+  const headers = [
+    { fieldName: 'id', label: 'Id' },
+    ...exportColumns.map((column) => ({
+      fieldName: `${column.metadata.fieldName}${column.type === 'RELATION' ? 'Id' : ''}`,
+      label: `${column.label}${column.type === 'RELATION' ? ' Id' : ''}`,
+    })),
+  ];
+  const worksheetRows = rows.map((row) =>
+    Object.fromEntries(
+      headers.map(({ fieldName, label }) => {
+        const value = row[fieldName];
+        return [
+          label,
+          isDefined(value) && typeof value === 'object'
+            ? JSON.stringify(value)
+            : value,
+        ];
+      }),
+    ),
+  );
+  const workbook = spreadsheetUtils.book_new();
+  const worksheet = spreadsheetUtils.json_to_sheet(worksheetRows, {
+    header: headers.map(({ label }) => label),
+  });
+  spreadsheetUtils.book_append_sheet(workbook, worksheet, 'Records');
+
+  return writeSpreadsheet(workbook, { bookType: 'xlsx', type: 'array' });
+};
+
+export const xlsxDownloader = (
+  filename: string,
+  data: GenerateExportOptions,
+) => {
+  const blob = new Blob([generateXlsx(data)], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  saveAs(blob, filename.replace(/\.csv$/i, '.xlsx'));
+};
+
 type UseExportTableDataOptions = Omit<UseRecordDataOptions, 'callback'> & {
   filename: string;
+  format?: 'csv' | 'xlsx';
 };
 
 export const useRecordIndexExportRecords = ({
   delayMs,
   filename,
+  format = 'csv',
   maximumRequests = 1000,
   objectMetadataItem,
   pageSize = EXPORT_TABLE_DATA_DEFAULT_PAGE_SIZE,
@@ -181,9 +235,14 @@ export const useRecordIndexExportRecords = ({
       ) => {
         const recordsProcessedForExport = processRecordsForCSVExport(records);
 
-        csvDownloader(filename, { rows: recordsProcessedForExport, columns });
+        const exportData = { rows: recordsProcessedForExport, columns };
+        if (format === 'xlsx') {
+          xlsxDownloader(filename, exportData);
+          return;
+        }
+        csvDownloader(filename, exportData);
       },
-    [filename, processRecordsForCSVExport],
+    [filename, format, processRecordsForCSVExport],
   );
 
   const { getTableData: download, progress } = useRecordIndexLazyFetchRecords({

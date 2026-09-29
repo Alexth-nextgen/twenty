@@ -334,11 +334,6 @@ export const ALL_ENTITY_PROPERTIES_CONFIGURATION_BY_METADATA_NAME = {
     },
   },
   view: {
-    recordListId: {
-      toCompare: false,
-      toStringify: false,
-      universalProperty: undefined,
-    },
     isSystemSideEffect: {
       toCompare: false,
       toStringify: false,

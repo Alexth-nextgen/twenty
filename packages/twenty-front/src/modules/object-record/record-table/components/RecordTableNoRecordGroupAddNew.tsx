@@ -10,6 +10,7 @@ import { RecordTableWidgetNestedRelationAddNewRow } from '@/object-record/record
 import { RecordTableWidgetContext } from '@/object-record/record-table-widget/contexts/RecordTableWidgetContext';
 import { canCreateRecordsForObjectMetadataItem } from '@/object-record/utils/canCreateRecordsForObjectMetadataItem';
 import { useLoadRecordsToVirtualRows } from '@/object-record/record-table/virtualization/hooks/useLoadRecordsToVirtualRows';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { totalNumberOfRecordsToVirtualizeComponentState } from '@/object-record/record-table/virtualization/states/totalNumberOfRecordsToVirtualizeComponentState';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
@@ -21,6 +22,7 @@ import { IconPlus } from 'twenty-ui/icon';
 
 export const RecordTableNoRecordGroupAddNew = () => {
   const { objectMetadataItem, recordTableId } = useRecordTableContextOrThrow();
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
 
   const recordTableWidgetContext = useContext(RecordTableWidgetContext);
   const nestedRelationCreateThrough =
@@ -78,7 +80,7 @@ export const RecordTableNoRecordGroupAddNew = () => {
     ],
   );
 
-  if (isRecordTableCellsNonEditable) {
+  if (isRecordTableCellsNonEditable || isRecordCreationDisabled) {
     return null;
   }
 

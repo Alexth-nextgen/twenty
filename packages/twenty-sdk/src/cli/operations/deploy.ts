@@ -66,8 +66,10 @@ const innerAppDeploy = async (
   const { fileId, uploadUrl, contentType } = createResult.data;
 
   try {
+    const fileBuffer = await fs.promises.readFile(tarballPath);
+
     await putFileToUploadUrl({
-      absolutePath: tarballPath,
+      fileBuffer,
       uploadUrl,
       contentType,
     });

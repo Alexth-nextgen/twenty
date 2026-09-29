@@ -1,0 +1,24 @@
+import { Field, ObjectType } from '@nestjs/graphql';
+
+import { UUIDScalarType } from 'src/engine/core-modules/application/native-extension-host/api/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
+
+@ObjectType('RecordListEntry')
+export class RecordListEntryDTO {
+  @Field(() => UUIDScalarType)
+  id: string;
+
+  @Field(() => UUIDScalarType)
+  sourceRecordId: string;
+
+  @Field()
+  position: number;
+
+  @Field(() => String, { nullable: true })
+  status: string | null;
+
+  @Field()
+  createdAt: Date;
+
+  @Field()
+  updatedAt: Date;
+}

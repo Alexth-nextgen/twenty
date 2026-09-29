@@ -1,0 +1,476 @@
+import { useMutation } from '@apollo/client/react';
+import { styled } from '@linaria/react';
+import { t } from '@lingui/core/macro';
+import { type FormEvent, useState } from 'react';
+import { FieldMetadataType } from 'twenty-shared/types';
+import { v4 } from 'uuid';
+import camelCase from 'lodash.camelcase';
+import { IconPlus, useIcons } from 'twenty-ui/icon';
+import { Switch } from 'twenty-ui/primitives/input';
+import { themeCssVariables } from 'twenty-ui/theme';
+
+import { useChangeRecordFieldVisibility } from '@/app/native-extension-host/api/modules/object-record/record-field/hooks/useChangeRecordFieldVisibility';
+import { useFieldMetadataItem } from '@/app/native-extension-host/api/modules/object-metadata/hooks/useFieldMetadataItem';
+import { type EnrichedObjectMetadataItem } from '@/app/native-extension-host/api/modules/object-metadata/types/EnrichedObjectMetadataItem';
+import { type RecordListViewDisplaySettings } from '../types/RecordListViewDisplaySettings';
+import { SYNC_RECORD_LIST_RELATED_FIELD } from '../graphql/mutations/syncRecordListRelatedField';
+
+const RELATED_FIELD_NAME_PREFIX = 'relatedField';
+
+const StyledMenuPage = styled.div`
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[1]};
+  min-width: 0;
+  padding: ${themeCssVariables.spacing[2]};
+  width: 100%;
+`;
+
+const StyledSectionLabel = styled.div`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+  text-transform: uppercase;
+`;
+
+const StyledSwitchRow = styled.div`
+  align-items: center;
+  color: ${themeCssVariables.font.color.primary};
+  display: flex;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 0 ${themeCssVariables.spacing[3]};
+
+  > span:first-child {
+    flex: 1;
+    line-height: 20px;
+  }
+
+  button {
+    flex-shrink: 0;
+
+    &[role='switch'] > span {
+      background-color: ${themeCssVariables.font.color.primary};
+    }
+  }
+`;
+
+const StyledSwitchControl = styled.div`
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  height: 20px;
+`;
+
+const StyledSearch = styled.input`
+  background: transparent;
+  border: 0;
+  color: ${themeCssVariables.font.color.primary};
+  font: inherit;
+  min-height: 36px;
+  outline: none;
+  padding: 0 ${themeCssVariables.spacing[3]};
+  width: 100%;
+`;
+
+const StyledAttributeList = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const StyledAttributePicker = styled.div`
+  max-height: 480px;
+  overflow-y: auto;
+`;
+
+const StyledAttributeButton = styled.button`
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.primary};
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: ${themeCssVariables.spacing[2]};
+  min-height: 32px;
+  overflow: hidden;
+  padding: 0 ${themeCssVariables.spacing[3]};
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${themeCssVariables.background.transparent.light};
+  }
+`;
+
+const StyledEmptyState = styled.div`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-size: ${themeCssVariables.font.size.sm};
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+`;
+
+const StyledCreateForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+`;
+
+const StyledInput = styled.input`
+  background: ${themeCssVariables.background.primary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.primary};
+  font: inherit;
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[2]};
+`;
+
+const StyledSelect = styled.select`
+  background: ${themeCssVariables.background.primary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.primary};
+  font: inherit;
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[2]};
+`;
+
+const StyledCreateButton = styled.button`
+  align-items: center;
+  background: ${themeCssVariables.color.blue};
+  border: 0;
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.inverted};
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: center;
+  min-height: 34px;
+`;
+
+type RecordListOptionsPageProps = {
+  recordListId: string;
+  parentObjectMetadataItem: EnrichedObjectMetadataItem;
+  objectMetadataItem: EnrichedObjectMetadataItem;
+  displaySettings: RecordListViewDisplaySettings;
+  isKanbanView: boolean;
+  visibleFieldMetadataIds: string[];
+  onDisplaySettingsChange: (
+    setting: keyof RecordListViewDisplaySettings,
+    value: boolean,
+  ) => void;
+};
+
+export const RecordListOptionsPage = ({
+  recordListId,
+  parentObjectMetadataItem,
+  objectMetadataItem,
+  displaySettings,
+  isKanbanView,
+  visibleFieldMetadataIds,
+  onDisplaySettingsChange,
+}: RecordListOptionsPageProps) => {
+  const { getIcon } = useIcons();
+  const { changeRecordFieldVisibility } = useChangeRecordFieldVisibility();
+  const { createMetadataField } = useFieldMetadataItem();
+  const [syncRelatedField] = useMutation(SYNC_RECORD_LIST_RELATED_FIELD);
+  const [attributeSearch, setAttributeSearch] = useState('');
+  const [isCreatingAttribute, setIsCreatingAttribute] = useState(false);
+  const [newAttributeName, setNewAttributeName] = useState('');
+  const [newAttributeType, setNewAttributeType] = useState<FieldMetadataType>(
+    FieldMetadataType.TEXT,
+  );
+  const visibleFieldMetadataIdSet = new Set(visibleFieldMetadataIds);
+
+  const sourceAttributes = parentObjectMetadataItem.fields.filter(
+    (field) =>
+      field.isActive &&
+      field.type !== FieldMetadataType.RELATION &&
+      field.type !== FieldMetadataType.MORPH_RELATION &&
+      !visibleFieldMetadataIdSet.has(
+        objectMetadataItem.fields.find(
+          (listField) =>
+            listField.name ===
+            `${RELATED_FIELD_NAME_PREFIX}${field.id.replace(/-/g, '')}`,
+        )?.id ?? '',
+      ) &&
+      field.label.toLowerCase().includes(attributeSearch.toLowerCase()),
+  );
+
+  const listAttributes = objectMetadataItem.fields.filter(
+    (field) =>
+      field.isActive &&
+      field.name !== 'sourceRecord' &&
+      !field.name.startsWith(RELATED_FIELD_NAME_PREFIX) &&
+      field.type !== FieldMetadataType.RELATION &&
+      field.type !== FieldMetadataType.MORPH_RELATION &&
+      !visibleFieldMetadataIdSet.has(field.id) &&
+      field.label.toLowerCase().includes(attributeSearch.toLowerCase()),
+  );
+
+  const addSourceAttribute = async (
+    sourceField: (typeof sourceAttributes)[number],
+  ) => {
+    const fieldName = `${RELATED_FIELD_NAME_PREFIX}${sourceField.id.replace(/-/g, '')}`;
+    const existingField = objectMetadataItem.fields.find(
+      (field) => field.name === fieldName,
+    );
+
+    if (existingField) {
+      await changeRecordFieldVisibility({
+        fieldMetadataId: existingField.id,
+        isVisible: true,
+      });
+      return;
+    }
+
+    const result = await createMetadataField({
+      objectMetadataId: objectMetadataItem.id,
+      type: sourceField.type,
+      name: fieldName,
+      label: sourceField.label,
+      icon: sourceField.icon ?? 'IconTextSize',
+      description: sourceField.description ?? null,
+      defaultValue: null,
+      options:
+        sourceField.options?.map((option) => ({
+          id: v4(),
+          label: option.label,
+          value: option.value,
+          color: option.color,
+          position: option.position,
+        })) ?? null,
+      settings: sourceField.settings ?? null,
+      isLabelSyncedWithName: false,
+      isUnique: false,
+    });
+
+    if (result.status !== 'successful') {
+      return;
+    }
+
+    const createdFieldId = result.response?.data?.createOneField?.id;
+
+    if (!createdFieldId) {
+      return;
+    }
+
+    await syncRelatedField({
+      variables: {
+        recordListId,
+        sourceFieldMetadataId: sourceField.id,
+      },
+    });
+    await changeRecordFieldVisibility({
+      fieldMetadataId: createdFieldId,
+      isVisible: true,
+    });
+  };
+
+  const addListAttribute = async (fieldMetadataId: string) => {
+    await changeRecordFieldVisibility({
+      fieldMetadataId,
+      isVisible: true,
+    });
+  };
+
+  const createListAttribute = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const label = newAttributeName.trim();
+
+    if (label.length === 0) {
+      return;
+    }
+
+    const result = await createMetadataField({
+      objectMetadataId: objectMetadataItem.id,
+      type: newAttributeType,
+      name: camelCase(label),
+      label,
+      icon: 'IconTextSize',
+      description: null,
+      defaultValue:
+        newAttributeType === FieldMetadataType.BOOLEAN ? false : null,
+      options:
+        newAttributeType === FieldMetadataType.SELECT
+          ? [
+              {
+                id: v4(),
+                label: 'Option 1',
+                value: 'option1',
+                color: 'gray',
+                position: 0,
+              },
+              {
+                id: v4(),
+                label: 'Option 2',
+                value: 'option2',
+                color: 'blue',
+                position: 1,
+              },
+            ]
+          : null,
+      settings: null,
+      isLabelSyncedWithName: true,
+      isUnique: false,
+    });
+
+    if (result.status !== 'successful') {
+      return;
+    }
+
+    const createdFieldId = result.response?.data?.createOneField?.id;
+
+    if (!createdFieldId) {
+      return;
+    }
+
+    await changeRecordFieldVisibility({
+      fieldMetadataId: createdFieldId,
+      isVisible: true,
+    });
+    setNewAttributeName('');
+    setIsCreatingAttribute(false);
+  };
+
+  return (
+    <StyledMenuPage>
+      {!isCreatingAttribute ? (
+        <>
+          {isKanbanView && (
+            <>
+              <StyledSwitchRow>
+                <span>{t`Show attribute labels`}</span>
+                <StyledSwitchControl>
+                  <Switch
+                    aria-label={t`Show attribute labels`}
+                    checked={displaySettings.showAttributeLabels}
+                    onCheckedChange={(checked) =>
+                      onDisplaySettingsChange('showAttributeLabels', checked)
+                    }
+                    size="md"
+                  />
+                </StyledSwitchControl>
+              </StyledSwitchRow>
+              <StyledSwitchRow>
+                <span>{t`Hide empty attributes`}</span>
+                <StyledSwitchControl>
+                  <Switch
+                    aria-label={t`Hide empty attributes`}
+                    checked={displaySettings.hideEmptyAttributes}
+                    onCheckedChange={(checked) =>
+                      onDisplaySettingsChange('hideEmptyAttributes', checked)
+                    }
+                    size="md"
+                  />
+                </StyledSwitchControl>
+              </StyledSwitchRow>
+            </>
+          )}
+
+          <StyledSectionLabel>{t`Add attribute to view`}</StyledSectionLabel>
+          <StyledSearch
+            aria-label={t`Search attributes`}
+            placeholder={t`Search attributes…`}
+            value={attributeSearch}
+            onChange={(event) => setAttributeSearch(event.target.value)}
+          />
+          <StyledAttributePicker>
+            <StyledSectionLabel>
+              {parentObjectMetadataItem.labelSingular} attributes
+            </StyledSectionLabel>
+            <StyledAttributeList>
+              {sourceAttributes.map((field) => {
+                const FieldIcon = getIcon(field.icon ?? 'IconTextSize');
+
+                return (
+                  <StyledAttributeButton
+                    key={field.id}
+                    type="button"
+                    onClick={() => void addSourceAttribute(field)}
+                  >
+                    <FieldIcon size={16} />
+                    {field.label}
+                  </StyledAttributeButton>
+                );
+              })}
+              {sourceAttributes.length === 0 && (
+                <StyledEmptyState>{t`No attributes found`}</StyledEmptyState>
+              )}
+            </StyledAttributeList>
+            <StyledSectionLabel>{t`List attributes`}</StyledSectionLabel>
+            <StyledAttributeList>
+              {listAttributes.map((field) => {
+                const FieldIcon = getIcon(field.icon ?? 'IconTextSize');
+
+                return (
+                  <StyledAttributeButton
+                    key={field.id}
+                    type="button"
+                    onClick={() => void addListAttribute(field.id)}
+                  >
+                    <FieldIcon size={16} />
+                    {field.label}
+                  </StyledAttributeButton>
+                );
+              })}
+              {listAttributes.length === 0 && (
+                <StyledEmptyState>{t`No attributes found`}</StyledEmptyState>
+              )}
+            </StyledAttributeList>
+          </StyledAttributePicker>
+          <StyledAttributeButton
+            type="button"
+            onClick={() => setIsCreatingAttribute(true)}
+          >
+            <IconPlus size={16} />
+            {t`Create new attribute`}
+          </StyledAttributeButton>
+        </>
+      ) : (
+        <>
+          <StyledAttributeButton
+            type="button"
+            onClick={() => setIsCreatingAttribute(false)}
+          >
+            {t`Back to attributes`}
+          </StyledAttributeButton>
+          <StyledSectionLabel>{t`Create new attribute`}</StyledSectionLabel>
+          <StyledCreateForm
+            onSubmit={(event) => void createListAttribute(event)}
+          >
+            <StyledInput
+              aria-label={t`Attribute name`}
+              placeholder={t`Attribute name`}
+              value={newAttributeName}
+              onChange={(event) => setNewAttributeName(event.target.value)}
+            />
+            <StyledSelect
+              aria-label={t`Attribute type`}
+              value={newAttributeType}
+              onChange={(event) =>
+                setNewAttributeType(event.target.value as FieldMetadataType)
+              }
+            >
+              <option value={FieldMetadataType.TEXT}>{t`Text`}</option>
+              <option value={FieldMetadataType.NUMBER}>{t`Number`}</option>
+              <option value={FieldMetadataType.DATE}>{t`Date`}</option>
+              <option value={FieldMetadataType.BOOLEAN}>{t`Checkbox`}</option>
+              <option value={FieldMetadataType.SELECT}>{t`Select`}</option>
+            </StyledSelect>
+            <StyledCreateButton type="submit">
+              <IconPlus size={16} />
+              {t`Create attribute`}
+            </StyledCreateButton>
+          </StyledCreateForm>
+        </>
+      )}
+    </StyledMenuPage>
+  );
+};

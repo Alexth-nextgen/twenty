@@ -14,6 +14,8 @@
     "**/generated/**",
     "**/generated-admin/**",
     "**/generated-metadata/**",
+    "**/native-extension-host/api/**",
+    "**/src/native-apps/**",
     "**/.cache/**",
     "**/node_modules/**",
     "**/*.min.js",

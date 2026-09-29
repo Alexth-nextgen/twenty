@@ -1,4 +1,5 @@
 import { SettingsDiscoveryHeroCard } from '@/settings/components/SettingsDiscoveryHeroCard';
+import { NativeAppSettings } from '@/app/native-extension-host/components/NativeAppSettings';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SettingsTabBar } from '@/settings/components/layout/SettingsTabBar';
@@ -41,6 +42,7 @@ export const SettingsApplications = () => {
       pill: t`Beta`,
     },
     { id: 'installed', title: t`Installed`, Icon: IconApps },
+    { id: 'native', title: t`Native apps`, Icon: IconApps },
     ...(hasDeveloperAccess
       ? [{ id: DEVELOPER_TAB_ID, title: t`Developer`, Icon: IconCode }]
       : []),
@@ -57,6 +59,8 @@ export const SettingsApplications = () => {
         return <SettingsApplicationsAvailableTab />;
       case 'installed':
         return <SettingsApplicationsInstalledTab />;
+      case 'native':
+        return <NativeAppSettings />;
       case 'developer':
         return <SettingsApplicationsDeveloperTab />;
       default:

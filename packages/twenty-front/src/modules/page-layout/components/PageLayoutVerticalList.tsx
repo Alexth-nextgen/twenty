@@ -78,6 +78,10 @@ type PageLayoutVerticalListProps = {
   isInEditMode: boolean;
   widgets: PageLayoutWidget[];
   leadingElement?: ReactNode;
+  contentAfterWidget?: {
+    widgetTitle: string;
+    element: ReactNode;
+  };
   trailingElement?: ReactNode;
   renderWidgetSeparator?: (widget: PageLayoutWidget) => ReactNode;
 };
@@ -86,6 +90,7 @@ export const PageLayoutVerticalList = ({
   isInEditMode,
   widgets,
   leadingElement,
+  contentAfterWidget,
   trailingElement,
   renderWidgetSeparator,
 }: PageLayoutVerticalListProps) => {
@@ -165,8 +170,16 @@ export const PageLayoutVerticalList = ({
               tabId={tabId}
               widget={widget}
             />
+            {isDefined(contentAfterWidget) &&
+              widget.title === contentAfterWidget.widgetTitle &&
+              contentAfterWidget.element}
           </Fragment>
         ))}
+        {isDefined(contentAfterWidget) &&
+          !widgets.some(
+            (widget) => widget.title === contentAfterWidget.widgetTitle,
+          ) &&
+          contentAfterWidget.element}
         {isInEditMode && !hasViewportFillingWidget && (
           <StyledDropTarget ref={endDropZoneRef}>
             <DragDropItemDropTarget

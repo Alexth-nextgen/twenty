@@ -1,5 +1,10 @@
 import { currentUserState } from '@/auth/states/currentUserState';
 import { currentUserWorkspaceState } from '@/auth/states/currentUserWorkspaceState';
+import { INBOX_PATH } from '@/home/constants/InboxPath';
+import {
+  DEFAULT_HOME_WIDGET_ORDER,
+  homePagePreferencesState,
+} from '@/home/states/homePagePreferencesState';
 import { metadataStoreState } from '@/metadata-store/states/metadataStoreState';
 import { useDefaultHomePagePath } from '@/navigation/hooks/useDefaultHomePagePath';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
@@ -138,7 +143,6 @@ const renderHooks = ({
   withExistingView,
   withObjectMetadataLoaded = true,
   objectMetadataItems = getTestEnrichedObjectMetadataItemsMock(),
-  navigationMenuItems = [],
   withNavigationMenuItemsLoaded = true,
   views,
 }: {
@@ -146,7 +150,6 @@ const renderHooks = ({
   withExistingView: boolean;
   withObjectMetadataLoaded?: boolean;
   objectMetadataItems?: EnrichedObjectMetadataItem[];
-  navigationMenuItems?: NavigationMenuItem[];
   withNavigationMenuItemsLoaded?: boolean;
   views?: Parameters<typeof setTestViewsInMetadataStore>[1];
 }) => {
@@ -161,7 +164,7 @@ const renderHooks = ({
   }
 
   jotaiStore.set(metadataStoreState.atomFamily('navigationMenuItems'), {
-    current: navigationMenuItems,
+    current: [],
     draft: [],
     status: withNavigationMenuItemsLoaded ? 'up-to-date' : 'empty',
   });
@@ -222,6 +225,14 @@ const renderHooks = ({
 };
 
 describe('useDefaultHomePagePath', () => {
+  beforeEach(() => {
+    jotaiStore.set(homePagePreferencesState.atom, {
+      hiddenWidgetIds: [],
+      startPage: AppPath.Home,
+      widgetOrder: DEFAULT_HOME_WIDGET_ORDER,
+    });
+  });
+
   afterEach(() => {
     mockIsMobile = false;
     mockIsInitialObjectViewEnabled = false;
@@ -247,33 +258,30 @@ describe('useDefaultHomePagePath', () => {
       expect(result.current.defaultHomePagePath).toEqual(AppPath.SignInUp);
     });
   });
-  it('should redirect to the first object of the navigation menu', async () => {
+  it('should return the personal home page for an onboarded user', async () => {
     const { result } = renderHooks({
       withCurrentUser: true,
       withExistingView: false,
-      navigationMenuItems: [
-        buildObjectNavigationMenuItem('person', 0),
-        buildObjectNavigationMenuItem('company', 1),
-      ],
     });
 
     await waitFor(() => {
-      expect(result.current.defaultHomePagePath).toEqual('/objects/people');
+      expect(result.current.defaultHomePagePath).toEqual(AppPath.Home);
     });
   });
-  it('should honor display order over a lower-positioned item nested in a folder', async () => {
+  it('should return the preferred inbox start page', async () => {
+    jotaiStore.set(homePagePreferencesState.atom, {
+      hiddenWidgetIds: [],
+      startPage: INBOX_PATH,
+      widgetOrder: DEFAULT_HOME_WIDGET_ORDER,
+    });
+
     const { result } = renderHooks({
       withCurrentUser: true,
       withExistingView: false,
-      navigationMenuItems: [
-        buildObjectNavigationMenuItem('company', 0, 'folder-1'),
-        buildObjectNavigationMenuItem('person', 1),
-        buildFolderNavigationMenuItem('folder-1', 2),
-      ],
     });
 
     await waitFor(() => {
-      expect(result.current.defaultHomePagePath).toEqual('/objects/people');
+      expect(result.current.defaultHomePagePath).toEqual(INBOX_PATH);
     });
   });
   it('should redirect to a PAGE_LAYOUT navigation menu item as homepage', async () => {
@@ -383,6 +391,8 @@ describe('useDefaultHomePagePath', () => {
   // Regression: during the post-login transition window object metadata may
   // not yet be loaded. We must not redirect the user to /settings/profile
   // (the genuine empty-fallback) until metadata has actually loaded.
+  // Metadata-dependent home content must not render during the transient
+  // post-login window before the workspace stores are ready.
   it('should defer to AppPath.Index when currentUser is defined but object metadata is not loaded yet', async () => {
     const { result } = renderHooks({
       withCurrentUser: true,
@@ -398,7 +408,6 @@ describe('useDefaultHomePagePath', () => {
     const { result } = renderHooks({
       withCurrentUser: true,
       withExistingView: false,
-      navigationMenuItems: [buildObjectNavigationMenuItem('person', 0)],
       withNavigationMenuItemsLoaded: false,
     });
 
@@ -412,7 +421,6 @@ describe('useDefaultHomePagePath', () => {
     const { result } = renderHooks({
       withCurrentUser: true,
       withExistingView: false,
-      navigationMenuItems: [buildObjectNavigationMenuItem('person', 0)],
     });
 
     await waitFor(() => {
@@ -437,7 +445,6 @@ describe('useDefaultHomePagePath', () => {
       withCurrentUser: true,
       withExistingView: false,
       objectMetadataItems: [],
-      navigationMenuItems: [],
       withNavigationMenuItemsLoaded: false,
     });
 

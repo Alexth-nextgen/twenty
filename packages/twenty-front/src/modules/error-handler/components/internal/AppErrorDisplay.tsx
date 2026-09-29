@@ -2,10 +2,24 @@ import { type AppErrorDisplayProps } from '@/error-handler/types/AppErrorDisplay
 import { AnimatedPlaceholder } from '@/ui/feedback/empty-state/components/AnimatedPlaceholder/AnimatedPlaceholder';
 import { EmptyState } from '@/ui/feedback/empty-state/components/EmptyState';
 import { t } from '@lingui/core/macro';
+import { styled } from '@linaria/react';
 import { IconRefresh } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
+import { themeCssVariables } from 'twenty-ui/theme';
+
+const StyledErrorDetail = styled.pre`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-family: monospace;
+  font-size: ${themeCssVariables.font.size.sm};
+  margin: ${themeCssVariables.spacing[3]} 0 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: pre-wrap;
+`;
 
 export const AppErrorDisplay = ({
+  error,
   resetErrorBoundary,
   title = t`Sorry, something went wrong`,
 }: AppErrorDisplayProps) => {
@@ -17,6 +31,9 @@ export const AppErrorDisplay = ({
         <EmptyState.Description>
           {t`Please refresh the page.`}
         </EmptyState.Description>
+        {import.meta.env.DEV && (
+          <StyledErrorDetail>{error.message}</StyledErrorDetail>
+        )}
       </EmptyState.Content>
       <Button
         startIcon={<IconRefresh />}

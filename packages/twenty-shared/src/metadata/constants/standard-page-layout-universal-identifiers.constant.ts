@@ -115,7 +115,6 @@ export const STANDARD_PAGE_LAYOUT_UNIVERSAL_IDENTIFIERS = {
           fields: 'Fields',
           company: 'Company',
           pointOfContactForOpportunities: 'Opportunities',
-          listMemberships: 'Lists',
         },
       },
       timeline: {

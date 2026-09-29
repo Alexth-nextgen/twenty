@@ -59,9 +59,8 @@ import { AppPath, SettingsPath, SidePanelPages } from 'twenty-shared/types';
 import { IconSearch, IconSparkles } from 'twenty-ui/icon';
 import { EngineComponentKey } from '~/generated-metadata/graphql';
 
-export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
-  EngineComponentKey,
-  React.ReactNode
+export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Partial<
+  Record<EngineComponentKey, React.ReactNode>
 > = {
   [EngineComponentKey.CREATE_NEW_RECORD]: <CreateNewRecordCommand />,
   [EngineComponentKey.DELETE_RECORDS]: <DeleteRecordsCommand />,

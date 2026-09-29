@@ -1,4 +1,5 @@
 import { currentUserState } from '@/auth/states/currentUserState';
+import { useHomePagePreferences } from '@/home/hooks/useHomePagePreferences';
 import { metadataStoreState } from '@/metadata-store/states/metadataStoreState';
 import { metadataStoreStatusFamilySelector } from '@/metadata-store/states/metadataStoreStatusFamilySelector';
 import { useNavigationMenuItemSectionItems } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemSectionItems';
@@ -8,8 +9,6 @@ import { computeObjectViewTargetIds } from '@/views/utils/computeObjectViewTarge
 import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
 import { objectMetadataItemsSelector } from '@/object-metadata/states/objectMetadataItemsSelector';
 import { filterReadableActiveObjectMetadataItems } from '@/object-metadata/utils/filterReadableActiveObjectMetadataItems';
-import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
-import { useIsMobile } from 'twenty-ui/utilities';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
@@ -20,11 +19,14 @@ import isEmpty from 'lodash.isempty';
 import { useCallback, useMemo } from 'react';
 import { AppPath, SettingsPath } from 'twenty-shared/types';
 import { getAppPath, getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { useIsMobile } from 'twenty-ui/utilities';
+import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 
 export const useDefaultHomePagePath = () => {
   const currentUser = useAtomStateValue(currentUserState);
-  const isMobile = useIsMobile();
+  const homePagePreferences = useHomePagePreferences();
   const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
+  const isMobile = useIsMobile();
   const metadataStore = useAtomFamilyStateValue(
     metadataStoreState,
     'objectMetadataItems',
@@ -100,7 +102,7 @@ export const useDefaultHomePagePath = () => {
     return { objectMetadataItem: firstObjectMetadataItem, viewId };
   }, [getTargetViewId, readableNonSystemObjectMetadataItems]);
 
-  const defaultHomePagePath = useMemo(() => {
+  const defaultHomePagePath = useMemo<string>(() => {
     if (!isDefined(currentUser)) {
       return AppPath.SignInUp;
     }
@@ -114,6 +116,10 @@ export const useDefaultHomePagePath = () => {
     // wrong fallback (/settings/profile or the alphabetically-first object).
     if (!areObjectMetadataItemsLoaded || !areNavigationMenuItemsLoaded) {
       return AppPath.Index;
+    }
+
+    if (homePagePreferences.startPage !== AppPath.Home) {
+      return homePagePreferences.startPage;
     }
 
     if (isEmpty(readableNonSystemObjectMetadataItems)) {
@@ -138,11 +144,9 @@ export const useDefaultHomePagePath = () => {
   }, [
     currentUser,
     isMobile,
-    readableNonSystemObjectMetadataItems,
     areObjectMetadataItemsLoaded,
     areNavigationMenuItemsLoaded,
-    firstNavigationMenuItemLink,
-    firstObjectPathInfo,
+    homePagePreferences.startPage,
   ]);
 
   return { defaultHomePagePath };

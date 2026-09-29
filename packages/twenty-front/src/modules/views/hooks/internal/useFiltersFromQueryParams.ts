@@ -2,8 +2,8 @@ import { isNonEmptyString, isObject } from '@sniptt/guards';
 import qs from 'qs';
 
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
-import { useObjectNameSingularFromPlural } from '@/object-metadata/hooks/useObjectNameSingularFromPlural';
 import { isCompositeFieldType } from '@/object-record/object-filter-dropdown/utils/isCompositeFieldType';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { type RecordFilterGroup } from '@/object-record/record-filter-group/types/RecordFilterGroup';
 import { type RecordFilter } from '@/object-record/record-filter/types/RecordFilter';
 import { filterUrlQueryParamsSchema } from '@/views/schemas/filterUrlQueryParamsSchema';
@@ -11,16 +11,13 @@ import { type ViewFilter } from '@/views/types/ViewFilter';
 import { deserializeUrlRecursiveFilterGroup } from '@/views/utils/deserializeUrlRecursiveFilterGroup';
 import { splitFieldNameIntoBaseAndSubField } from '@/views/utils/splitFieldNameIntoBaseAndSubField';
 import { useCallback } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { type ViewFilterOperand } from 'twenty-shared/types';
 import { isDefined, isExpectedSubFieldName } from 'twenty-shared/utils';
 
 export const useFiltersFromQueryParams = () => {
   const [searchParams] = useSearchParams();
-  const { objectNamePlural = '' } = useParams();
-  const { objectNameSingular } = useObjectNameSingularFromPlural({
-    objectNamePlural,
-  });
+  const { objectNameSingular } = useRecordIndexContextOrThrow();
   const { objectMetadataItem } = useObjectMetadataItem({
     objectNameSingular,
   });

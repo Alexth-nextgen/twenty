@@ -48,11 +48,13 @@ const StyledItemsContainer = styled.div<{ shouldReverse: boolean }>`
 
 export const PinnedCommandMenuItemButtons = ({
   containerWidth,
+  isRecordCreationDisabled = false,
 }: {
   // Provided when an ancestor already knows the width available to the
   // buttons; the row then shrinks to fit instead of stretching over the free
   // space to measure it, so sibling actions stay adjacent to the buttons.
   containerWidth?: number;
+  isRecordCreationDisabled?: boolean;
 }) => {
   const theme = useTheme();
   const { commandMenuItems, containerType } = useContext(CommandMenuContext);
@@ -68,8 +70,16 @@ export const PinnedCommandMenuItemButtons = ({
   const shouldLabelSingleCommandMenuItem = isSidePanelFooter;
 
   const pinnedCommandMenuItems = useMemo(
-    () => commandMenuItems.filter((item) => item.isPinned === true),
-    [commandMenuItems],
+    () =>
+      commandMenuItems.filter(
+        (item) =>
+          item.isPinned === true &&
+          !(
+            isRecordCreationDisabled &&
+            item.engineComponentKey === EngineComponentKey.CREATE_NEW_RECORD
+          ),
+      ),
+    [commandMenuItems, isRecordCreationDisabled],
   );
 
   const labelledCommandMenuItemId = shouldLabelSingleCommandMenuItem

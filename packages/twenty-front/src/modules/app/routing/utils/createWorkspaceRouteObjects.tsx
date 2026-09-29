@@ -9,8 +9,9 @@ import {
   SettingsRouteOutlet,
 } from '@/app/components/SettingsRoutes';
 import { type WorkspaceRouteObject } from '@/app/routing/types/WorkspaceRouteObject';
+import { INBOX_PATH } from '@/home/constants/InboxPath';
 import { RecordIndexSkeletonLoader } from '@/object-record/record-index/components/RecordIndexSkeletonLoader';
-import { RECORD_LIST_PATH } from '@/record-list/constants/RecordListPath';
+import { createNativeAppRoutes } from '@/app/native-extension-host/utils/createNativeAppRoutes';
 
 const WorkflowCoreIndexPage = lazy(() =>
   import('~/pages/object-core/WorkflowCoreIndexPage').then((module) => ({
@@ -36,12 +37,6 @@ const RecordShowPage = lazy(() =>
   })),
 );
 
-const RecordListPage = lazy(() =>
-  import('~/pages/record-list/RecordListPage').then((module) => ({
-    default: module.RecordListPage,
-  })),
-);
-
 const StandalonePageLayoutPage = lazy(() =>
   import('~/pages/page-layout/StandalonePageLayoutPage').then((module) => ({
     default: module.StandalonePageLayoutPage,
@@ -54,9 +49,15 @@ const AiChatPage = lazy(() =>
   })),
 );
 
-const MobileHomePage = lazy(() =>
-  import('~/pages/mobile-home/MobileHomePage').then((module) => ({
-    default: module.MobileHomePage,
+const HomePage = lazy(() =>
+  import('~/pages/home/HomePage').then((module) => ({
+    default: module.HomePage,
+  })),
+);
+
+const InboxPage = lazy(() =>
+  import('~/pages/inbox/InboxPage').then((module) => ({
+    default: module.InboxPage,
   })),
 );
 
@@ -136,18 +137,7 @@ export const createWorkspaceRouteObjects = ({
       ),
       handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
     },
-    {
-      path: RECORD_LIST_PATH,
-      element: (
-        <LazyRoute fallback={<RecordIndexSkeletonLoader />}>
-          <RecordListPage />
-        </LazyRoute>
-      ),
-      handle: {
-        workspaceSurfaces: MAIN_AND_SIDE_PANEL,
-        isLocationExpandableFromSidePanel: true,
-      },
-    },
+    ...createNativeAppRoutes(),
     {
       path: AppPath.PageLayoutPage,
       element: (
@@ -168,7 +158,15 @@ export const createWorkspaceRouteObjects = ({
       path: AppPath.Home,
       element: (
         <LazyRoute>
-          <MobileHomePage />
+          <HomePage />
+        </LazyRoute>
+      ),
+    },
+    {
+      path: INBOX_PATH,
+      element: (
+        <LazyRoute>
+          <InboxPage />
         </LazyRoute>
       ),
     },

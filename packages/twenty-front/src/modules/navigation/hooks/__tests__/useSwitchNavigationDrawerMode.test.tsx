@@ -13,6 +13,7 @@ import { act, renderHook } from '@testing-library/react';
 import { createStore, Provider } from 'jotai';
 import { type ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { AppPath } from 'twenty-shared/types';
 
 jest.mock('@/ai/hooks/useReturnFromExpandedAiChat');
 jest.mock('@/ai/hooks/useSwitchToNewAiChat');
@@ -32,7 +33,7 @@ jest.mock('@/side-panel/hooks/useOpenAskAiPageInSidePanel', () => ({
   useOpenAskAiPageInSidePanel: () => ({ openAskAiPage: jest.fn() }),
 }));
 
-const DEFAULT_HOME_PAGE_PATH = '/objects/companies';
+const DEFAULT_HOME_PAGE_PATH = AppPath.Home;
 const AI_CHAT_PATH = '/chat/20202020-0687-4c41-b707-ed1bfca972a7';
 
 const mockSwitchToNewChat = jest.fn();
@@ -103,11 +104,39 @@ describe('useSwitchNavigationDrawerMode', () => {
       ),
     );
 
-    expect(result.current.location.pathname).toBe('/objects/people');
+    expect(result.current.location.pathname).toBe(AppPath.Home);
     expect(store.get(isNavigationDrawerExpandedState.atom)).toBe(false);
     expect(store.get(navigationDrawerActiveTabState.atom)).toBe(
       NAVIGATION_DRAWER_TABS.NAVIGATION_MENU,
     );
+  });
+
+  it('opens home when the navigation menu is already active', () => {
+    const { result } = renderSwitchNavigationDrawerMode({
+      pathname: '/objects/people',
+    });
+
+    act(() =>
+      result.current.switchNavigationDrawerMode(
+        NAVIGATION_DRAWER_TABS.NAVIGATION_MENU,
+      ),
+    );
+
+    expect(result.current.location.pathname).toBe(AppPath.Home);
+  });
+
+  it('stays put when home is already open', () => {
+    const { result } = renderSwitchNavigationDrawerMode({
+      pathname: AppPath.Home,
+    });
+
+    act(() =>
+      result.current.switchNavigationDrawerMode(
+        NAVIGATION_DRAWER_TABS.NAVIGATION_MENU,
+      ),
+    );
+
+    expect(result.current.location.pathname).toBe(AppPath.Home);
   });
 
   it('leaves settings for the default home page when it was opened from the chat', () => {

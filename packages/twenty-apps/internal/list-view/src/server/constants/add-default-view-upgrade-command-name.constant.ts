@@ -1,0 +1,2 @@
+export const ADD_DEFAULT_VIEW_TO_RECORD_LIST_UPGRADE_COMMAND_NAME =
+  '2.39.0_AddDefaultViewToRecordListFastInstanceCommand_1790261967024';

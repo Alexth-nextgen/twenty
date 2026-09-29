@@ -13,6 +13,7 @@ import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { SidePanelFooter } from '@/ui/layout/side-panel/components/SidePanelFooter';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { styled } from '@linaria/react';
+import { type ReactNode } from 'react';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { themeCssVariables } from 'twenty-ui/theme';
@@ -42,8 +43,10 @@ const StyledContentContainer = styled.div`
 
 export const PageLayoutRecordPageRenderer = ({
   targetRecordIdentifier,
+  contentTrailingElement,
 }: {
   targetRecordIdentifier: TargetRecordIdentifier;
+  contentTrailingElement?: ReactNode;
 }) => {
   const isInSidePanel = useWorkspaceSurface().type === 'side-panel';
   const recordDeletedAt = useAtomFamilySelectorValue(
@@ -91,7 +94,10 @@ export const PageLayoutRecordPageRenderer = ({
             }}
           >
             {isDefined(pageLayoutId) && (
-              <PageLayoutRenderer pageLayoutId={pageLayoutId} />
+              <PageLayoutRenderer
+                pageLayoutId={pageLayoutId}
+                contentTrailingElement={contentTrailingElement}
+              />
             )}
           </LayoutRenderingProvider>
         </StyledContentContainer>

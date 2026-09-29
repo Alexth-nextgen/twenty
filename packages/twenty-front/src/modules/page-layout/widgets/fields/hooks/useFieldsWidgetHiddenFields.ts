@@ -5,6 +5,7 @@ import {
 } from '@/page-layout/widgets/fields/types/FieldsWidgetGroup';
 import { useFieldsWidgetFields } from '@/page-layout/widgets/fields/hooks/useFieldsWidgetFields';
 import { getHiddenFieldsFromGroups } from '@/page-layout/widgets/fields/utils/getHiddenFieldsFromGroups';
+import { isRecordListMembershipRelationField } from '@/page-layout/widgets/fields/utils/isRecordListMembershipRelationField';
 import { useViewById } from '@/views/hooks/useViewById';
 import { useMemo } from 'react';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
@@ -30,7 +31,10 @@ export const useFieldsWidgetHiddenFields = ({
       return [];
     }
 
-    const activeFields = visibleFields.filter((field) => field.isActive);
+    const activeFields = visibleFields.filter(
+      (field) =>
+        field.isActive && !isRecordListMembershipRelationField(field),
+    );
 
     if (isDefined(view) && isNonEmptyArray(view.viewFieldGroups)) {
       const groups: FieldsWidgetGroup[] = view.viewFieldGroups.map((group) => {

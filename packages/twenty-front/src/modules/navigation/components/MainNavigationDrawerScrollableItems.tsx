@@ -1,6 +1,8 @@
 import { NavigationDrawerOpenedSection } from '@/navigation-menu-item/display/sections/components/NavigationDrawerOpenedSection';
+import { NavigationDrawerHomeItem } from '@/navigation/components/NavigationDrawerHomeItem';
+import { NavigationDrawerInboxItem } from '@/navigation/components/NavigationDrawerInboxItem';
 import { NavigationDrawerWorkspaceSectionSkeletonLoader } from '@/object-metadata/components/NavigationDrawerWorkspaceSectionSkeletonLoader';
-import { RecordListsSection } from '@/record-list/components/RecordListsSection';
+import { NativeAppNavigation } from '@/app/native-extension-host/components/NativeAppSlot';
 
 import { styled } from '@linaria/react';
 import { lazy, Suspense } from 'react';
@@ -32,11 +34,13 @@ const StyledScrollableItemsContainer = styled.div`
 export const MainNavigationDrawerScrollableItems = () => {
   return (
     <StyledScrollableItemsContainer>
+      <NavigationDrawerHomeItem />
+      <NavigationDrawerInboxItem />
       <NavigationDrawerOpenedSection />
       <Suspense fallback={<NavigationDrawerWorkspaceSectionSkeletonLoader />}>
         <FavoritesSectionDispatcher />
         <WorkspaceSectionDispatcher />
-        <RecordListsSection />
+        <NativeAppNavigation />
       </Suspense>
     </StyledScrollableItemsContainer>
   );

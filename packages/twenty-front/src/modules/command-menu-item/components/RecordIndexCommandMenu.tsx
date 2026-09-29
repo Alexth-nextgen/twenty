@@ -8,9 +8,11 @@ import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/st
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 
 export const RecordIndexCommandMenu = () => {
   const isInSidePanel = useWorkspaceSurface().type === 'side-panel';
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
 
   const contextStoreCurrentObjectMetadataItemId = useAtomComponentStateValue(
     contextStoreCurrentObjectMetadataItemIdComponentState,
@@ -29,7 +31,9 @@ export const RecordIndexCommandMenu = () => {
             containerType={CommandMenuItemContainerType.IndexPageHeader}
             isInPreviewMode={isLayoutCustomizationModeEnabled && !isInSidePanel}
           >
-            <PinnedCommandMenuItemButtons />
+            <PinnedCommandMenuItemButtons
+              isRecordCreationDisabled={isRecordCreationDisabled}
+            />
           </CommandMenuContextProvider>
           <CommandMenuContextProvider
             displayType="dropdownItem"

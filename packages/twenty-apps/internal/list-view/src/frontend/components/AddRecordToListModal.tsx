@@ -1,0 +1,287 @@
+import { styled } from '@linaria/react';
+import { t } from '@lingui/core/macro';
+import { useState } from 'react';
+import { Button } from 'twenty-ui/primitives/input';
+import { LightIconButton } from 'twenty-ui/components';
+import { IconCheck, IconPlus, IconSearch, IconX } from 'twenty-ui/icon';
+import { Dialog } from 'twenty-ui/primitives/surfaces';
+import { themeCssVariables } from 'twenty-ui/theme';
+
+import { useRecordsForSelect } from '@/app/native-extension-host/api/modules/object-record/select/hooks/useRecordsForSelect';
+import { useCreateOneRecord } from '@/app/native-extension-host/api/modules/object-record/hooks/useCreateOneRecord';
+import { useOpenRecordInSidePanel } from '@/app/native-extension-host/api/modules/side-panel/hooks/useOpenRecordInSidePanel';
+import { ADD_RECORD_TO_LIST_MODAL_ID } from '../constants/AddRecordToListModalId';
+import { useRecordListEntries } from '../hooks/useRecordListEntries';
+import { useAddRecordsToList } from '../hooks/useAddRecordsToList';
+import { useSnackBar } from '@/app/native-extension-host/api/modules/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { ModalStatefulWrapper } from '@/app/native-extension-host/api/modules/ui/layout/modal/components/ModalStatefulWrapper';
+import { useModal } from '@/app/native-extension-host/api/modules/ui/layout/modal/hooks/useModal';
+
+const StyledHeader = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+`;
+
+const StyledSearch = styled.div`
+  align-items: center;
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.md};
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+  padding: 0 ${themeCssVariables.spacing[3]};
+
+  &:focus-within {
+    border-color: ${themeCssVariables.color.blue};
+  }
+`;
+
+const StyledSearchInput = styled.input`
+  background: transparent;
+  border: 0;
+  color: ${themeCssVariables.font.color.primary};
+  flex: 1;
+  font-family: ${themeCssVariables.font.family};
+  font-size: ${themeCssVariables.font.size.md};
+  min-height: 40px;
+  outline: none;
+`;
+
+const StyledResults = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[1]};
+  max-height: 360px;
+  overflow-y: auto;
+`;
+
+const StyledResult = styled.button<{ selected: boolean }>`
+  align-items: center;
+  background: ${({ selected }) =>
+    selected ? themeCssVariables.background.transparent.blue : 'transparent'};
+  border: 0;
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.primary};
+  cursor: pointer;
+  display: flex;
+  font-family: ${themeCssVariables.font.family};
+  font-size: ${themeCssVariables.font.size.md};
+  justify-content: space-between;
+  min-height: 40px;
+  padding: ${themeCssVariables.spacing[2]};
+  text-align: left;
+
+  &:hover,
+  &:focus-visible {
+    background: ${themeCssVariables.background.transparent.light};
+    outline: none;
+  }
+`;
+
+const StyledEmpty = styled.div`
+  color: ${themeCssVariables.font.color.tertiary};
+  padding: ${themeCssVariables.spacing[6]} ${themeCssVariables.spacing[2]};
+  text-align: center;
+`;
+
+type AddRecordToListModalProps = {
+  recordListId: string;
+  parentObjectMetadataId: string;
+  objectNameSingular: string;
+  objectLabelPlural: string;
+  objectLabelSingular: string;
+  onRecordsAdded?: () => void;
+};
+
+export const AddRecordToListModal = ({
+  recordListId,
+  parentObjectMetadataId,
+  objectNameSingular,
+  objectLabelPlural,
+  objectLabelSingular,
+  onRecordsAdded,
+}: AddRecordToListModalProps) => {
+  const [searchFilterText, setSearchFilterText] = useState('');
+  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
+  const { closeModal } = useModal();
+  const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const {
+    addRecordToList,
+    isAddingRecord,
+    loading: areRecordListEntriesLoading,
+    recordListEntries,
+    refetch: refetchRecordListEntries,
+  } = useRecordListEntries(recordListId);
+  const { addRecordsToList, loading: areRecordsBeingAdded } =
+    useAddRecordsToList();
+  const existingRecordIds = recordListEntries.map(
+    (recordListEntry) => recordListEntry.sourceRecordId,
+  );
+  const { recordsToSelect, loading } = useRecordsForSelect({
+    searchFilterText,
+    selectedIds: [],
+    excludedRecordIds: existingRecordIds,
+    objectNameSingular,
+    allowRequestsToTwentyIcons: true,
+  });
+  const { createOneRecord, loading: isCreatingRecord } = useCreateOneRecord({
+    objectNameSingular,
+  });
+  const { openRecordInSidePanel } = useOpenRecordInSidePanel();
+
+  const handleClose = () => {
+    setSearchFilterText('');
+    setSelectedRecordIds([]);
+    closeModal(ADD_RECORD_TO_LIST_MODAL_ID);
+  };
+
+  const handleAddSelected = async () => {
+    try {
+      const result = await addRecordsToList({
+        recordListId,
+        sourceRecordIds: selectedRecordIds,
+        parentObjectMetadataId,
+      });
+
+      if (!result) {
+        throw new Error('Bulk list assignment did not return a result');
+      }
+
+      await refetchRecordListEntries();
+      enqueueSuccessSnackBar({
+        message: t`${result.addedCount} records added to list`,
+      });
+      setSelectedRecordIds([]);
+      onRecordsAdded?.();
+      handleClose();
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to add records to list` });
+    }
+  };
+
+  const toggleRecord = (recordId: string) => {
+    setSelectedRecordIds((currentRecordIds) =>
+      currentRecordIds.includes(recordId)
+        ? currentRecordIds.filter(
+            (currentRecordId) => currentRecordId !== recordId,
+          )
+        : [...currentRecordIds, recordId],
+    );
+  };
+
+  const handleCreateRecord = async () => {
+    try {
+      const record = await createOneRecord({});
+
+      await addRecordToList(record.id);
+      onRecordsAdded?.();
+      handleClose();
+      openRecordInSidePanel({
+        recordId: record.id,
+        objectNameSingular,
+        isNewRecord: true,
+      });
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to create record` });
+    }
+  };
+
+  return (
+    <ModalStatefulWrapper
+      modalInstanceId={ADD_RECORD_TO_LIST_MODAL_ID}
+      isClosable
+      onClose={handleClose}
+      size="medium"
+      renderInDocumentBody
+      autoHeight
+    >
+      <Dialog.Header>
+        <StyledHeader>
+          <span>{t`Add ${objectLabelPlural}`}</span>
+          <LightIconButton
+            aria-label={t`Close`}
+            size="sm"
+            onClick={handleClose}
+          >
+            <IconX />
+          </LightIconButton>
+        </StyledHeader>
+      </Dialog.Header>
+      <Dialog.Body>
+        <StyledSearch>
+          <IconSearch size={16} />
+          <StyledSearchInput
+            autoFocus
+            value={searchFilterText}
+            placeholder={t`Search ${objectLabelPlural}`}
+            onChange={(event) => setSearchFilterText(event.target.value)}
+          />
+        </StyledSearch>
+        <StyledResults>
+          {loading || areRecordListEntriesLoading ? (
+            <StyledEmpty role="status">{t`Loading records…`}</StyledEmpty>
+          ) : recordsToSelect.length === 0 ? (
+            <StyledEmpty>
+              {searchFilterText.length > 0
+                ? t`No records found`
+                : existingRecordIds.length > 0
+                  ? t`All available records are already in this list`
+                  : t`No records available`}
+            </StyledEmpty>
+          ) : (
+            recordsToSelect.map((record) => {
+              const selected = selectedRecordIds.includes(record.id);
+
+              return (
+                <StyledResult
+                  key={record.id}
+                  type="button"
+                  aria-pressed={selected}
+                  selected={selected}
+                  disabled={
+                    areRecordsBeingAdded ||
+                    isCreatingRecord ||
+                    areRecordListEntriesLoading
+                  }
+                  onClick={() => toggleRecord(record.id)}
+                >
+                  <span>{record.name}</span>
+                  {selected ? <IconCheck size={16} /> : <IconPlus size={16} />}
+                </StyledResult>
+              );
+            })
+          )}
+        </StyledResults>
+        <Button
+          startIcon={<IconPlus />}
+          variant="outline"
+          loading={isCreatingRecord}
+          onClick={() => void handleCreateRecord()}
+        >
+          {t`Create new ${objectLabelSingular}`}
+        </Button>
+      </Dialog.Body>
+      <Dialog.Footer>
+        <Button variant="outline" onClick={handleClose}>
+          {t`Cancel`}
+        </Button>
+        <Button
+          color="accent"
+          variant="solid"
+          disabled={
+            selectedRecordIds.length === 0 ||
+            isCreatingRecord ||
+            areRecordListEntriesLoading
+          }
+          loading={areRecordsBeingAdded || isAddingRecord}
+          onClick={() => void handleAddSelected()}
+        >
+          {selectedRecordIds.length > 0
+            ? t`Add ${selectedRecordIds.length} selected`
+            : t`Add selected`}
+        </Button>
+      </Dialog.Footer>
+    </ModalStatefulWrapper>
+  );
+};

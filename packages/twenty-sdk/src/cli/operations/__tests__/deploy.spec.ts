@@ -74,7 +74,7 @@ describe('appDeploy', () => {
       fileFolder: 'app-tarball',
     });
     expect(mockPutFileToUploadUrl).toHaveBeenCalledWith({
-      absolutePath: tarballPath,
+      fileBuffer: Buffer.from(TARBALL_CONTENT),
       uploadUrl: uploadTarget.uploadUrl,
       contentType: uploadTarget.contentType,
     });

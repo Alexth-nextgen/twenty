@@ -1,0 +1,12 @@
+import { gql } from '@apollo/client';
+
+import { RECORD_LIST_ENTRY_FRAGMENT } from '../fragments/recordListEntryFragment';
+
+export const ADD_RECORD_TO_LIST = gql`
+  ${RECORD_LIST_ENTRY_FRAGMENT}
+  mutation AddRecordToList($input: AddRecordToListInput!) {
+    addRecordToList(input: $input) {
+      ...RecordListEntryFields
+    }
+  }
+`;

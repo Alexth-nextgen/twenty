@@ -1,5 +1,6 @@
 import { useObjectPermissionsForObject } from '@/object-record/hooks/useObjectPermissionsForObject';
 import { useCurrentRecordGroupId } from '@/object-record/record-group/hooks/useCurrentRecordGroupId';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useRecordGroupFilter } from '@/object-record/record-group/hooks/useRecordGroupFilter';
 import { recordGroupDefinitionFamilyState } from '@/object-record/record-group/states/recordGroupDefinitionFamilyState';
 import { getFieldMetadataItemGqlFieldName } from '@/object-metadata/utils/getFieldMetadataItemGqlFieldName';
@@ -23,6 +24,7 @@ import { IconPlus } from 'twenty-ui/icon';
 
 export const RecordTableRecordGroupSectionAddNew = () => {
   const { objectMetadataItem, recordTableId } = useRecordTableContextOrThrow();
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
 
   const recordTableWidgetContext = useContext(RecordTableWidgetContext);
   const nestedRelationCreateThrough =
@@ -58,7 +60,7 @@ export const RecordTableRecordGroupSectionAddNew = () => {
     objectMetadataItem.id,
   );
 
-  if (isRecordTableCellsNonEditable) {
+  if (isRecordTableCellsNonEditable || isRecordCreationDisabled) {
     return null;
   }
 

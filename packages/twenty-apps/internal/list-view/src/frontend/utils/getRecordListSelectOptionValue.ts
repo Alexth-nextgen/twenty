@@ -1,0 +1,19 @@
+export const getRecordListSelectOptionValue = (
+  label: string,
+  existingValues: string[] = [],
+) => {
+  const baseValue =
+    label
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'OPTION';
+  let value = baseValue;
+  let suffix = 2;
+
+  while (existingValues.includes(value)) {
+    value = `${baseValue}_${suffix}`;
+    suffix += 1;
+  }
+
+  return value;
+};

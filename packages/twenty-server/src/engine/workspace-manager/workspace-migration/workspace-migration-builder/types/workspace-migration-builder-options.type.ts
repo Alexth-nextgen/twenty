@@ -5,5 +5,4 @@ export type WorkspaceMigrationBuilderOptions = {
   isSystemBuild: boolean;
   applicationUniversalIdentifier: string;
   shouldCreateObjectNavigationItems?: boolean;
-  recordListId?: string;
 };

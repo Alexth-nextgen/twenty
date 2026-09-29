@@ -8,6 +8,8 @@ import { createRequiredContext } from '~/utils/createRequiredContext';
 
 export type RecordIndexContextValue = {
   indexIdentifierUrl: (recordId: string) => string;
+  isRecordCreationDisabled?: boolean;
+  onOpenRecord?: (recordId: string) => void;
   onIndexRecordsLoaded: () => void;
   objectNamePlural: string;
   objectNameSingular: string;

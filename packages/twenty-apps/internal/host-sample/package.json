@@ -1,0 +1,10 @@
+{
+  "name": "twenty-native-host-sample-app",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0",
+  "files": ["src", "native-app.json", "README.md"],
+  "scripts": {
+    "build:native": "node ../../../../tools/native-apps/build.mjs"
+  }
+}

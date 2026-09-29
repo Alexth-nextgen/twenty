@@ -1,0 +1,6 @@
+{
+  "applications": [
+    "packages/twenty-apps/internal/host-sample",
+    "packages/twenty-apps/internal/list-view"
+  ]
+}

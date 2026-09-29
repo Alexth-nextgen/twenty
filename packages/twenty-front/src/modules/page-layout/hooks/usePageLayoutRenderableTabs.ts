@@ -6,6 +6,8 @@ import { getIsFirstTabPinned } from '@/page-layout/utils/getIsFirstTabPinned';
 import { getTabsByDisplayMode } from '@/page-layout/utils/getTabsByDisplayMode';
 import { getTabsRenderableForTargetObject } from '@/page-layout/utils/getTabsRenderableForTargetObject';
 import { getTabsWithVisibleWidgets } from '@/page-layout/utils/getTabsWithVisibleWidgets';
+import { isFieldWidget } from '@/page-layout/widgets/field/utils/isFieldWidget';
+import { isRecordListMembershipRelationField } from '@/page-layout/widgets/fields/utils/isRecordListMembershipRelationField';
 import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { isDefined } from 'twenty-shared/utils';
@@ -44,8 +46,37 @@ export const usePageLayoutRenderableTabs = () => {
         targetObjectFields: targetObjectMetadataItem?.fields,
       });
 
+  const tabsForDisplay = isPageLayoutInEditMode
+    ? renderableTabs
+    : renderableTabs
+        .map((tab) => ({
+          ...tab,
+          widgets: tab.widgets.filter((widget) => {
+            if (!isFieldWidget(widget)) {
+              return true;
+            }
+
+            if (widget.title === 'Lists') {
+              return false;
+            }
+
+            const fieldMetadataItem = targetObjectMetadataItem?.fields.find(
+              (field) =>
+                field.id === widget.configuration.fieldMetadataId ||
+                field.universalIdentifier ===
+                  widget.configuration.fieldMetadataId ||
+                field.name === widget.configuration.fieldMetadataId,
+            );
+
+            return (
+              !isDefined(fieldMetadataItem) ||
+              !isRecordListMembershipRelationField(fieldMetadataItem)
+            );
+          }),
+        }));
+
   const { tabsToRenderInTabList, pinnedLeftTab } = getTabsByDisplayMode({
-    tabs: renderableTabs,
+    tabs: tabsForDisplay,
     pageLayoutType: currentPageLayout.type,
     isMobile,
     isInSidePanel,

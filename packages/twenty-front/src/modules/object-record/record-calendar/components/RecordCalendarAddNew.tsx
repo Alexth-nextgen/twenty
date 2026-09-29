@@ -1,5 +1,6 @@
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useObjectPermissionsForObject } from '@/object-record/hooks/useObjectPermissionsForObject';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { isFieldMetadataReadOnlyByPermissions } from '@/object-record/read-only/utils/internal/isFieldMetadataReadOnlyByPermissions';
 import { useRecordCalendarContextOrThrow } from '@/object-record/record-calendar/contexts/RecordCalendarContext';
 import { isRecordCalendarReadOnlyComponentState } from '@/object-record/record-calendar/states/isRecordCalendarReadOnlyComponentState';
@@ -33,6 +34,7 @@ type RecordCalendarAddNewProps = {
 export const RecordCalendarAddNew = ({
   cardDate,
 }: RecordCalendarAddNewProps) => {
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
   const isRecordCalendarReadOnly = useAtomComponentStateValue(
     isRecordCalendarReadOnlyComponentState,
   );
@@ -75,6 +77,7 @@ export const RecordCalendarAddNew = ({
   if (
     isDefined(recordTableWidgetContext?.nestedRelationCreateThrough) ||
     isDefined(recordTableWidgetContext?.junctionCreateThrough) ||
+    isRecordCreationDisabled ||
     isRecordCalendarReadOnly ||
     hasAnySoftDeleteFilterOnView === true ||
     !canCreateRecordsForObjectMetadataItem({

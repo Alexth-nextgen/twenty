@@ -1,4 +1,6 @@
+import { NativeAppCommand } from '@/app/native-extension-host/components/NativeAppSlot';
 import { CommandMenuItemErrorBoundary } from '@/command-menu-item/display/components/CommandMenuItemErrorBoundary';
+import { commandMenuItemsSelector } from '@/command-menu-item/states/commandMenuItemsSelector';
 import { ENGINE_COMPONENT_KEY_COMPONENT_MAP } from '@/command-menu-item/engine-command/constants/EngineComponentKeyHeadlessComponentMap';
 import { useUnmountCommand } from '@/command-menu-item/engine-command/hooks/useUnmountEngineCommand';
 import { CommandComponentInstanceContext } from '@/command-menu-item/engine-command/states/contexts/CommandComponentInstanceContext';
@@ -11,6 +13,7 @@ export const CommandRunner = () => {
     headlessCommandContextApisState,
   );
   const unmountCommand = useUnmountCommand();
+  const commandMenuItems = useAtomStateValue(commandMenuItemsSelector);
 
   return (
     <>
@@ -27,7 +30,23 @@ export const CommandRunner = () => {
                 shouldReportToSentry
                 onError={() => unmountCommand(commandMenuItemId)}
               >
-                {ENGINE_COMPONENT_KEY_COMPONENT_MAP[context.engineComponentKey]}
+                {ENGINE_COMPONENT_KEY_COMPONENT_MAP[
+                  context.engineComponentKey
+                ] ?? (
+                  <NativeAppCommand
+                    commandLabel={commandMenuItems.find(
+                      (item) => item.id === commandMenuItemId,
+                    )?.label}
+                    commandKey={
+                      String(context.engineComponentKey) ===
+                      'NATIVE_APP_COMMAND'
+                        ? (commandMenuItems.find(
+                            (item) => item.id === commandMenuItemId,
+                          )?.universalIdentifier ?? '')
+                        : context.engineComponentKey
+                    }
+                  />
+                )}
               </CommandMenuItemErrorBoundary>
             </CommandComponentInstanceContext.Provider>
           </ContextStoreComponentInstanceContext.Provider>

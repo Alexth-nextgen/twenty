@@ -11,10 +11,16 @@ import { ObjectOptionsDropdownRecordGroupLoadLimitContent } from '@/object-recor
 import { ObjectOptionsDropdownRecordGroupsContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupsContent';
 import { ObjectOptionsDropdownRecordGroupSortContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupSortContent';
 import { ObjectOptionsDropdownVisibilityContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownVisibilityContent';
+import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
+import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader/DropdownMenuHeader';
+import { DropdownMenuHeaderLeftComponent } from '@/ui/layout/dropdown/components/DropdownMenuHeader/internal/DropdownMenuHeaderLeftComponent';
+import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
+import { IconChevronLeft } from 'twenty-ui/icon';
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
 
 export const ObjectOptionsDropdownContent = () => {
-  const { currentContentId } = useObjectOptionsDropdown();
+  const { currentContentId, additionalPage, resetContent } =
+    useObjectOptionsDropdown();
 
   switch (currentContentId) {
     case 'layout':
@@ -41,6 +47,28 @@ export const ObjectOptionsDropdownContent = () => {
       return <ObjectOptionsDropdownCalendarFieldsContent />;
     case 'visibility':
       return <ObjectOptionsDropdownVisibilityContent />;
+    case 'additional':
+      if (!additionalPage) {
+        return <ObjectOptionsDropdownMenuContent />;
+      }
+
+      return (
+        <LegacyDropdownContent
+          widthInPixels={GenericDropdownContentWidth.Large}
+        >
+          <DropdownMenuHeader
+            StartComponent={
+              <DropdownMenuHeaderLeftComponent
+                onClick={resetContent}
+                Icon={IconChevronLeft}
+              />
+            }
+          >
+            {additionalPage.label}
+          </DropdownMenuHeader>
+          {additionalPage.content}
+        </LegacyDropdownContent>
+      );
     default:
       return <ObjectOptionsDropdownMenuContent />;
   }

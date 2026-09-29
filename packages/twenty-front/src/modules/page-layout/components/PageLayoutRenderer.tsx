@@ -8,15 +8,18 @@ import { getTabListInstanceIdFromPageLayoutAndRecord } from '@/page-layout/utils
 import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
 import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
 import { TabListComponentInstanceContext } from '@/ui/layout/tab-list/states/contexts/TabListComponentInstanceContext';
+import { type ReactNode } from 'react';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
 type PageLayoutRendererProps = {
   pageLayoutId: string;
+  contentTrailingElement?: ReactNode;
 };
 
 export const PageLayoutRenderer = ({
   pageLayoutId,
+  contentTrailingElement,
 }: PageLayoutRendererProps) => {
   const { targetRecordIdentifier, layoutType } = useLayoutRenderingContext();
 
@@ -49,7 +52,9 @@ export const PageLayoutRenderer = ({
           <PageLayoutInitializationQueryEffect pageLayoutId={pageLayoutId} />
           <PageLayoutRecordPageCustomizationSessionRegistrationEffect />
           <RecordTableWidgetViewDraftsInitializationEffect />
-          <PageLayoutRendererContent />
+          <PageLayoutRendererContent
+            contentTrailingElement={contentTrailingElement}
+          />
         </PageLayoutEditModeProvider>
       </TabListComponentInstanceContext.Provider>
     </PageLayoutComponentInstanceContext.Provider>

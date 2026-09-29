@@ -5,6 +5,7 @@ import { themeCssVariables } from 'twenty-ui/theme';
 
 import { getFieldMetadataItemGqlFieldName } from '@/object-metadata/utils/getFieldMetadataItemGqlFieldName';
 import { useObjectPermissionsForObject } from '@/object-record/hooks/useObjectPermissionsForObject';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { RECORD_BOARD_COLUMN_WIDTH } from '@/object-record/record-board/constants/RecordBoardColumnWidth';
 import { RECORD_BOARD_COLUMN_WIDTH_CSS_VARIABLE_NAME } from '@/object-record/record-board/constants/RecordBoardColumnWidthCssVariableName';
 import { RecordBoardContext } from '@/object-record/record-board/contexts/RecordBoardContext';
@@ -127,6 +128,7 @@ const StyledDropdownContainer = styled.div`
 `;
 
 export const RecordBoardColumnHeader = () => {
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
   const { columnDefinition, columnIndex } = useContext(
     RecordBoardColumnContext,
   );
@@ -163,6 +165,7 @@ export const RecordBoardColumnHeader = () => {
   const canCreateRecords =
     !isCreateThroughRelationWidget &&
     !isRecordBoardCellsNonEditable &&
+    !isRecordCreationDisabled &&
     canCreateRecordsForObjectMetadataItem({
       objectPermissions,
       objectMetadataItem,

@@ -3,6 +3,7 @@ import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { useGenerateDepthRecordGqlFieldsFromObject } from '@/object-record/graphql/record-gql-fields/hooks/useGenerateDepthRecordGqlFieldsFromObject';
 import { useBatchCreateManyRecords } from '@/object-record/hooks/useBatchCreateManyRecords';
+import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { useBuildSpreadsheetImportFields } from '@/object-record/spreadsheet-import/hooks/useBuildSpreadSheetImportFields';
 import { buildRecordFromImportedStructuredRow } from '@/object-record/spreadsheet-import/utils/buildRecordFromImportedStructuredRow';
 import { spreadsheetImportFilterAvailableFieldMetadataItems } from '@/object-record/spreadsheet-import/utils/spreadsheetImportFilterAvailableFieldMetadataItems';
@@ -13,6 +14,17 @@ import { spreadsheetImportCreatedRecordsProgressState } from '@/spreadsheet-impo
 import { type SpreadsheetImportDialogOptions } from '@/spreadsheet-import/types';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useToast } from 'twenty-ui/components';
+
+type ObjectRecordsSpreadsheetImportOptions = Omit<
+  SpreadsheetImportDialogOptions,
+  | 'spreadsheetImportFields'
+  | 'availableFieldMetadataItems'
+  | 'isOpen'
+  | 'onClose'
+  | 'onSubmit'
+> & {
+  onRecordsImported?: (records: ObjectRecord[]) => Promise<void>;
+};
 
 export const useOpenObjectRecordsSpreadsheetImportDialog = (
   objectNameSingular: string,
@@ -48,10 +60,7 @@ export const useOpenObjectRecordsSpreadsheetImportDialog = (
   });
 
   const openObjectRecordsSpreadsheetImportDialog = (
-    options?: Omit<
-      SpreadsheetImportDialogOptions,
-      'fields' | 'isOpen' | 'onClose'
-    >,
+    options?: ObjectRecordsSpreadsheetImportOptions,
   ) => {
     const availableFieldMetadataItemsToImport =
       spreadsheetImportFilterAvailableFieldMetadataItems(
@@ -62,8 +71,10 @@ export const useOpenObjectRecordsSpreadsheetImportDialog = (
       availableFieldMetadataItemsToImport,
     );
 
+    const { onRecordsImported, ...spreadsheetImportOptions } = options ?? {};
+
     openSpreadsheetImportDialog({
-      ...options,
+      ...spreadsheetImportOptions,
       onSubmit: async (data) => {
         const createInputs = data.validStructuredRows.map((record) => {
           const fieldMapping: Record<string, any> =
@@ -77,10 +88,11 @@ export const useOpenObjectRecordsSpreadsheetImportDialog = (
         });
 
         try {
-          await batchCreateManyRecords({
+          const importedRecords = await batchCreateManyRecords({
             recordsToCreate: createInputs,
             upsert: true,
           });
+          await onRecordsImported?.(importedRecords);
           await apolloCoreClient.refetchQueries({
             updateCache: (cache) => {
               cache.evict({ fieldName: objectMetadataItem.namePlural });

@@ -27,6 +27,7 @@ import { useIsMobile } from 'twenty-ui/utilities';
 import { ScrollWrapper } from '@/ui/utilities/scroll/components/ScrollWrapper';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
+import { type ReactNode } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme';
 import { PageLayoutType } from '~/generated-metadata/graphql';
@@ -137,7 +138,11 @@ const StyledScrollWrapperContainer = styled.div`
   }
 `;
 
-export const PageLayoutTabsRenderer = () => {
+export const PageLayoutTabsRenderer = ({
+  contentTrailingElement,
+}: {
+  contentTrailingElement?: ReactNode;
+}) => {
   const workspaceSurface = useWorkspaceSurface();
   const { currentPageLayout } = useCurrentPageLayoutOrThrow();
 
@@ -254,6 +259,7 @@ export const PageLayoutTabsRenderer = () => {
               <PageLayoutLeftPanel
                 pageLayoutId={currentPageLayout.id}
                 pinnedLeftTabId={pinnedLeftTab.id}
+                contentTrailingElement={contentTrailingElement}
               />
             )}
 
@@ -285,14 +291,28 @@ export const PageLayoutTabsRenderer = () => {
                           keepMounted
                           render={<StyledTabPanel />}
                         >
-                          <PageLayoutMainContent tabId={tab.id} />
+                          <PageLayoutMainContent
+                            tabId={tab.id}
+                            contentTrailingElement={
+                              tab.id === activeTabId && !isDefined(pinnedLeftTab)
+                                ? contentTrailingElement
+                                : undefined
+                            }
+                          />
                         </Tabs.Panel>
                       ) : (
                         <StyledTabContentDisplay
                           key={tab.id}
                           isActiveTab={tab.id === activeTabId}
                         >
-                          <PageLayoutMainContent tabId={tab.id} />
+                          <PageLayoutMainContent
+                            tabId={tab.id}
+                            contentTrailingElement={
+                              tab.id === activeTabId && !isDefined(pinnedLeftTab)
+                                ? contentTrailingElement
+                                : undefined
+                            }
+                          />
                         </StyledTabContentDisplay>
                       ),
                     )}

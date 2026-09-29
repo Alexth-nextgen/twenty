@@ -77,7 +77,6 @@ export type ViewOverrides = {
 ])
 @Index('IDX_VIEW_MAIN_GROUP_BY_FIELD_METADATA', ['mainGroupByFieldMetadataId'])
 @Index('IDX_VIEW_CREATED_BY_USER_WORKSPACE', ['createdByUserWorkspaceId'])
-@Index('IDX_VIEW_RECORD_LIST_ID', ['recordListId'])
 @Check(
   'CHK_VIEW_CALENDAR_INTEGRITY',
   `("type" NOT IN ('CALENDAR', 'CALENDAR_WIDGET') OR ("calendarLayout" IS NOT NULL AND "calendarFieldMetadataId" IS NOT NULL))`,
@@ -100,12 +99,6 @@ export class ViewEntity
   })
   @JoinColumn({ name: 'objectMetadataId' })
   objectMetadata: Relation<ObjectMetadataEntity>;
-
-  @WasIntroducedInUpgrade({
-    upgradeCommandName: CREATE_RECORD_LIST_METADATA_UPGRADE_COMMAND_NAME,
-  })
-  @Column({ nullable: true, type: 'uuid' })
-  recordListId: string | null;
 
   @Column({
     type: 'enum',

@@ -1,0 +1,579 @@
+import { styled } from '@linaria/react';
+import { gql } from '@apollo/client';
+import { useApolloClient } from '@apollo/client/react';
+import { useCallback, useEffect, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
+import { LightIconButton } from 'twenty-ui/components';
+import { IconEdit, IconLayoutSidebarRightExpand } from 'twenty-ui/icon';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { isDefined } from 'twenty-shared/utils';
+import { useOpenRecordInSidePanel } from '@/app/native-extension-host/api/modules/side-panel/hooks/useOpenRecordInSidePanel';
+import { useLingui } from '@lingui/react';
+import { t } from '@lingui/core/macro';
+
+type RecordListCardActionsProps = {
+  rootRef: RefObject<HTMLDivElement | null>;
+  entryObjectNamePlural: string;
+  entryObjectNameSingular: string;
+  fields: Array<{
+    name: string;
+    label: string;
+    type: string;
+    isSystem: boolean;
+    options?: Array<{ label?: string | null; value?: string | null }> | null;
+  }>;
+  parentObjectNameSingular: string;
+  getSourceRecordId: (entryRecordId: string) => string | null;
+  onRecordListEntryUpdated: () => void;
+};
+
+type CardTarget = {
+  element: HTMLElement;
+  recordId: string;
+};
+
+const StyledCardActions = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  position: absolute;
+  right: 30px;
+  top: 4px;
+  transition: opacity 100ms ease;
+  z-index: 3;
+
+  :global([data-selectable-id]:hover) &,
+  :global([data-selectable-id]:focus-within) & {
+    opacity: 1;
+  }
+`;
+
+const StyledActionButton = styled.button`
+  align-items: center;
+  background: ${themeCssVariables.background.secondary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.secondary};
+  cursor: pointer;
+  display: flex;
+  height: 26px;
+  justify-content: center;
+  padding: 0;
+  width: 26px;
+
+  &:hover {
+    background: ${themeCssVariables.background.tertiary};
+    color: ${themeCssVariables.font.color.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${themeCssVariables.color.blue};
+    outline-offset: 1px;
+  }
+`;
+
+const StyledEditorBackdrop = styled.div`
+  background: rgb(0 0 0 / 24%);
+  inset: 0;
+  position: fixed;
+  z-index: 1200;
+`;
+
+const StyledEditorPanel = styled.section`
+  background: ${themeCssVariables.background.primary};
+  border-left: 1px solid ${themeCssVariables.border.color.light};
+  bottom: 0;
+  box-shadow: ${themeCssVariables.boxShadow.strong};
+  color: ${themeCssVariables.font.color.primary};
+  display: flex;
+  flex-direction: column;
+  max-width: 100vw;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 520px;
+`;
+
+const StyledPanelHeader = styled.header`
+  align-items: center;
+  border-bottom: 1px solid ${themeCssVariables.border.color.light};
+  display: flex;
+  justify-content: space-between;
+  padding: ${themeCssVariables.spacing[4]};
+`;
+
+const StyledPanelTitle = styled.h2`
+  font-size: ${themeCssVariables.font.size.md};
+  font-weight: ${themeCssVariables.font.weight.medium};
+  margin: 0;
+`;
+
+const StyledPanelBody = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[4]};
+  overflow: auto;
+  padding: ${themeCssVariables.spacing[4]};
+`;
+
+const StyledField = styled.label`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[1]};
+`;
+
+const StyledFieldLabel = styled.span`
+  color: ${themeCssVariables.font.color.secondary};
+  font-size: ${themeCssVariables.font.size.xs};
+  font-weight: ${themeCssVariables.font.weight.medium};
+`;
+
+const StyledInput = styled.input`
+  background: ${themeCssVariables.background.secondary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.primary};
+  font: inherit;
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[2]};
+  width: 100%;
+`;
+
+const StyledSelect = styled.select`
+  background: ${themeCssVariables.background.secondary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${themeCssVariables.font.color.primary};
+  font: inherit;
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[2]};
+  width: 100%;
+`;
+
+const StyledPanelFooter = styled.footer`
+  border-top: 1px solid ${themeCssVariables.border.color.light};
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: flex-end;
+  padding: ${themeCssVariables.spacing[3]} ${themeCssVariables.spacing[4]};
+`;
+
+const StyledFooterButton = styled.button<{ isPrimary?: boolean }>`
+  background: ${({ isPrimary }) =>
+    isPrimary ? themeCssVariables.color.blue : themeCssVariables.background.secondary};
+  border: 1px solid
+    ${({ isPrimary }) =>
+      isPrimary ? themeCssVariables.color.blue : themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  color: ${({ isPrimary }) =>
+    isPrimary ? themeCssVariables.font.color.inverted : themeCssVariables.font.color.primary};
+  cursor: pointer;
+  font: inherit;
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[3]};
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
+const StyledPanelMessage = styled.p`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-size: ${themeCssVariables.font.size.sm};
+`;
+
+type EditableField = {
+  name: string;
+  label: string;
+  type: string;
+  options: Array<{ label: string; value: string }>;
+};
+
+type EntryWithId = Record<string, unknown> & { id: string };
+
+const getInputValue = (value: unknown, fieldType: string): string => {
+  if (value === null || value === undefined) return '';
+  if (fieldType === 'DATE' && typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+  if (typeof value === 'boolean') return String(value);
+  return '';
+};
+
+const RecordListEntryEditorPanel = ({
+  recordId,
+  fields: objectFields,
+  objectNamePlural,
+  objectNameSingular,
+  onClose,
+  onSaved,
+}: {
+  recordId: string;
+  fields: RecordListCardActionsProps['fields'];
+  objectNamePlural: string;
+  objectNameSingular: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) => {
+  const { i18n } = useLingui();
+  const client = useApolloClient();
+  const [fields, setFields] = useState<EditableField[]>([]);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEntry = async () => {
+      try {
+        const editableFields = objectFields.filter(
+          (field) =>
+            !field.isSystem &&
+            field.name !== 'sourceRecord' &&
+            ['TEXT', 'NUMBER', 'DATE', 'BOOLEAN', 'SELECT'].includes(field.type),
+        );
+        const selectedFields = editableFields
+          .map((field) => field.name)
+          .filter((fieldName) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName));
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(objectNamePlural)) {
+          throw new Error('The list entry object name is invalid.');
+        }
+        const entryQuery = gql`
+          query GetRecordListEntryForEditor {
+            ${objectNamePlural}(
+              filter: { id: { eq: "${recordId}" } }
+              first: 1
+            ) {
+              edges {
+                node { id ${selectedFields.join(' ')} }
+              }
+            }
+          }
+        `;
+        const entryResult = await client.query<{
+          [pluralName: string]: { edges: Array<{ node: EntryWithId }> };
+        }>({ query: entryQuery, fetchPolicy: 'network-only' });
+        const entry = entryResult.data?.[objectNamePlural]?.edges?.[0]
+          ?.node;
+
+        if (!isDefined(entry)) {
+          throw new Error('The selected list entry could not be loaded.');
+        }
+
+        if (!isMounted) return;
+
+        const loadedFields = editableFields.map((field) => ({
+          name: field.name,
+          label: field.label,
+          type: field.type,
+          options: (field.options ?? [])
+            .filter(
+              (option): option is { label: string; value: string } =>
+                typeof option.label === 'string' &&
+                typeof option.value === 'string',
+            ),
+        }));
+        setFields(loadedFields);
+        setValues(
+          Object.fromEntries(
+            editableFields.map((field) => [
+              field.name,
+              getInputValue(entry[field.name], field.type),
+            ]),
+          ),
+        );
+      } catch (loadError) {
+        if (isMounted) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'List entry fields could not be loaded.',
+          );
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    void loadEntry();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [client, objectFields, objectNamePlural, objectNameSingular, recordId]);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+
+    try {
+      const data = Object.fromEntries(
+        fields.map((field) => {
+          const value = values[field.name] ?? '';
+          if (value.length === 0) return [field.name, null];
+          if (field.type === 'NUMBER') return [field.name, Number(value)];
+          if (field.type === 'BOOLEAN') return [field.name, value === 'true'];
+          return [field.name, value];
+        }),
+      );
+
+      const mutationFields = Object.entries(data)
+        .filter(([fieldName]) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName))
+        .map(([fieldName, value]) => `${fieldName}: ${JSON.stringify(value)}`)
+        .join(' ');
+      await client.mutate({
+        mutation: gql`
+          mutation UpdateRecordListEntryFromCard {
+            update${objectNameSingular[0].toUpperCase()}${objectNameSingular.slice(1)}(
+              id: "${recordId}"
+              data: { ${mutationFields} }
+            ) { id }
+          }
+        `,
+      });
+      onSaved();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'List entry could not be updated.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateValue = (name: string, value: string) => {
+    setValues((currentValues) => ({ ...currentValues, [name]: value }));
+  };
+
+  return (
+    <StyledEditorBackdrop onMouseDown={onClose}>
+      <StyledEditorPanel
+        aria-label={i18n._(t`Edit list entry`)}
+        aria-modal="true"
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <StyledPanelHeader>
+          <StyledPanelTitle>{i18n._(t`Edit list entry`)}</StyledPanelTitle>
+          <LightIconButton
+            aria-label={i18n._(t`Close`)}
+            size="sm"
+            onClick={onClose}
+          >
+            <span aria-hidden="true">×</span>
+          </LightIconButton>
+        </StyledPanelHeader>
+        <StyledPanelBody>
+          {loading ? (
+            <StyledPanelMessage>{i18n._(t`Loading list fields…`)}</StyledPanelMessage>
+          ) : error && fields.length === 0 ? (
+            <StyledPanelMessage role="alert">{error}</StyledPanelMessage>
+          ) : fields.length === 0 ? (
+            <StyledPanelMessage>{i18n._(t`This list has no editable fields.`)}</StyledPanelMessage>
+          ) : (
+            <>
+              {fields.map((field) => (
+                <StyledField key={field.name}>
+                  <StyledFieldLabel>{field.label}</StyledFieldLabel>
+                  {field.type === 'SELECT' || field.type === 'BOOLEAN' ? (
+                    <StyledSelect
+                      aria-label={field.label}
+                      value={values[field.name] ?? ''}
+                      onChange={(event) =>
+                        updateValue(field.name, event.target.value)
+                      }
+                    >
+                      <option value="">{i18n._(t`No value`)}</option>
+                      {field.type === 'BOOLEAN' ? (
+                        <>
+                          <option value="true">{i18n._(t`Yes`)}</option>
+                          <option value="false">{i18n._(t`No`)}</option>
+                        </>
+                      ) : (
+                        field.options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))
+                      )}
+                    </StyledSelect>
+                  ) : (
+                    <StyledInput
+                      aria-label={field.label}
+                      type={
+                        field.type === 'DATE'
+                          ? 'date'
+                          : field.type === 'NUMBER'
+                            ? 'number'
+                            : 'text'
+                      }
+                      value={values[field.name] ?? ''}
+                      onChange={(event) =>
+                        updateValue(field.name, event.target.value)
+                      }
+                    />
+                  )}
+                </StyledField>
+              ))}
+              {error.length > 0 && <StyledPanelMessage role="alert">{error}</StyledPanelMessage>}
+            </>
+          )}
+        </StyledPanelBody>
+        <StyledPanelFooter>
+          <StyledFooterButton type="button" onClick={onClose}>
+            {i18n._(t`Cancel`)}
+          </StyledFooterButton>
+          <StyledFooterButton
+            disabled={loading || saving || fields.length === 0}
+            isPrimary
+            onClick={() => void save()}
+            type="button"
+          >
+            {saving ? i18n._(t`Saving…`) : i18n._(t`Save`)}
+          </StyledFooterButton>
+        </StyledPanelFooter>
+      </StyledEditorPanel>
+    </StyledEditorBackdrop>
+  );
+};
+
+const RecordListCardActionButtons = ({
+  recordId,
+  parentObjectNameSingular,
+  getSourceRecordId,
+  onEdit,
+}: {
+  recordId: string;
+  parentObjectNameSingular: string;
+  getSourceRecordId: (entryRecordId: string) => string | null;
+  onEdit: (recordId: string) => void;
+}) => {
+  const { i18n } = useLingui();
+  const { openRecordInSidePanel } = useOpenRecordInSidePanel();
+  const sourceRecordId = getSourceRecordId(recordId);
+
+  return (
+    <StyledCardActions
+      onClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <StyledActionButton
+        aria-label={i18n._(t`Edit list entry`)}
+        onClick={() => onEdit(recordId)}
+        title={i18n._(t`Edit list entry`)}
+        type="button"
+      >
+        <IconEdit size={16} />
+      </StyledActionButton>
+      <StyledActionButton
+        aria-label={i18n._(t`Open record side panel`)}
+        disabled={!isDefined(sourceRecordId)}
+        onClick={() => {
+          if (isDefined(sourceRecordId)) {
+            openRecordInSidePanel({
+              recordId: sourceRecordId,
+              objectNameSingular: parentObjectNameSingular,
+            });
+          }
+        }}
+        title={i18n._(t`Open record side panel`)}
+        type="button"
+      >
+        <IconLayoutSidebarRightExpand size={16} />
+      </StyledActionButton>
+    </StyledCardActions>
+  );
+};
+
+export const RecordListCardActions = ({
+  rootRef,
+  entryObjectNamePlural,
+  entryObjectNameSingular,
+  fields,
+  parentObjectNameSingular,
+  getSourceRecordId,
+  onRecordListEntryUpdated,
+}: RecordListCardActionsProps) => {
+  const [cardTargets, setCardTargets] = useState<CardTarget[]>([]);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+
+  const findCardTargets = useCallback(() => {
+    const rootElement = rootRef.current;
+    if (!isDefined(rootElement)) return;
+
+    const nextCardTargets = Array.from(
+      rootElement.querySelectorAll<HTMLElement>(
+        '[data-selectable-id][id^="record-board-card-"]',
+      ),
+    ).map((element) => ({
+      element,
+      recordId: element.dataset.selectableId ?? '',
+    })).filter((target) => target.recordId.length > 0);
+
+    setCardTargets((currentCardTargets) =>
+      currentCardTargets.length === nextCardTargets.length &&
+      currentCardTargets.every(
+        (target, index) =>
+          target.element === nextCardTargets[index]?.element &&
+          target.recordId === nextCardTargets[index]?.recordId,
+      )
+        ? currentCardTargets
+        : nextCardTargets,
+    );
+  }, [rootRef]);
+
+  useEffect(() => {
+    const rootElement = rootRef.current;
+    if (!isDefined(rootElement)) return;
+
+    findCardTargets();
+    const observer = new MutationObserver(findCardTargets);
+    observer.observe(rootElement, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [findCardTargets, rootRef]);
+
+  return (
+    <>
+      {cardTargets.map(({ element, recordId }) =>
+        createPortal(
+          <RecordListCardActionButtons
+            key={recordId}
+            getSourceRecordId={getSourceRecordId}
+            onEdit={setEditingRecordId}
+            parentObjectNameSingular={parentObjectNameSingular}
+            recordId={recordId}
+          />,
+          element,
+          `list-card-actions-${recordId}`,
+        ),
+      )}
+      {isDefined(editingRecordId) &&
+        createPortal(
+          <RecordListEntryEditorPanel
+            fields={fields}
+            objectNamePlural={entryObjectNamePlural}
+            objectNameSingular={entryObjectNameSingular}
+            onClose={() => setEditingRecordId(null)}
+            onSaved={() => {
+              setEditingRecordId(null);
+              onRecordListEntryUpdated();
+            }}
+            recordId={editingRecordId}
+          />,
+          document.body,
+        )}
+    </>
+  );
+};

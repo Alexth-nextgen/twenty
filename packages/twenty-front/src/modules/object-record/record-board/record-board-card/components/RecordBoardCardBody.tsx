@@ -1,5 +1,6 @@
 import { isRecordFieldReadOnly } from '@/object-record/read-only/utils/isRecordFieldReadOnly';
 import { RecordBoardContext } from '@/object-record/record-board/contexts/RecordBoardContext';
+import { RecordBoardCardDisplaySettingsContext } from '@/object-record/record-board/contexts/RecordBoardCardDisplaySettingsContext';
 import { StopPropagationContainer } from '@/object-record/record-board/record-board-card/components/StopPropagationContainer';
 import { RECORD_BOARD_CARD_INPUT_ID_PREFIX } from '@/object-record/record-board/record-board-card/constants/RecordBoardCardInputIdPrefix';
 import { RecordBoardCardContext } from '@/object-record/record-board/record-board-card/contexts/RecordBoardCardContext';
@@ -14,6 +15,7 @@ import {
 import { RecordFieldComponentInstanceContext } from '@/object-record/record-field/ui/states/contexts/RecordFieldComponentInstanceContext';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { RecordInlineCell } from '@/object-record/record-inline-cell/components/RecordInlineCell';
+import { useIsFieldEmpty } from '@/object-record/record-field/ui/hooks/useIsFieldEmpty';
 import { getRecordFieldInputInstanceId } from '@/object-record/utils/getRecordFieldInputId';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
@@ -26,6 +28,9 @@ export const RecordBoardCardBody = () => {
   );
 
   const { updateOneRecord, objectPermissions } = useContext(RecordBoardContext);
+  const { showAttributeLabels, hideEmptyAttributes } = useContext(
+    RecordBoardCardDisplaySettingsContext,
+  );
 
   const {
     labelIdentifierFieldMetadataItem,
@@ -93,7 +98,6 @@ export const RecordBoardCardBody = () => {
                   fieldDefinition: correspondingFieldDefinition,
                   objectPermissionsByObjectMetadataId,
                 }),
-                fieldDefinition: correspondingFieldDefinition,
                 useUpdateRecord: useUpdateOneRecordHook,
                 isDisplayModeFixHeight: true,
                 triggerEvent: 'CLICK',
@@ -101,6 +105,10 @@ export const RecordBoardCardBody = () => {
                   ? undefined
                   : `${RECORD_BOARD_CARD_INPUT_ID_PREFIX}-${recordId}-${correspondingFieldDefinition.metadata.fieldName}`,
                 onMouseEnter: () => handleMouseEnter(index),
+                fieldDefinition: {
+                  ...correspondingFieldDefinition,
+                  showLabel: showAttributeLabels,
+                },
               }}
             >
               <RecordFieldComponentInstanceContext.Provider
@@ -112,14 +120,28 @@ export const RecordBoardCardBody = () => {
                   }),
                 }}
               >
-                <RecordInlineCell
-                  instanceIdPrefix={RECORD_BOARD_CARD_INPUT_ID_PREFIX}
-                />
+                <RecordBoardCardField hideWhenEmpty={hideEmptyAttributes} />
               </RecordFieldComponentInstanceContext.Provider>
             </FieldContext.Provider>
           </StopPropagationContainer>
         );
       })}
     </RecordCardBodyContainer>
+  );
+};
+
+const RecordBoardCardField = ({
+  hideWhenEmpty,
+}: {
+  hideWhenEmpty: boolean;
+}) => {
+  const isFieldEmpty = useIsFieldEmpty();
+
+  if (hideWhenEmpty && isFieldEmpty) {
+    return null;
+  }
+
+  return (
+    <RecordInlineCell instanceIdPrefix={RECORD_BOARD_CARD_INPUT_ID_PREFIX} />
   );
 };

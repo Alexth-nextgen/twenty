@@ -1,0 +1,45 @@
+import { useMutation } from '@apollo/client/react';
+
+import { ADD_RECORDS_TO_LIST } from '../graphql/mutations/addRecordsToList';
+import { FIND_RECORD_LIST_MEMBERSHIPS } from '../graphql/queries/findRecordListMemberships';
+import { evictRecordListEntriesFromCache } from '../utils/evictRecordListEntriesFromCache';
+
+type AddRecordsToListResult = {
+  addedCount: number;
+  skippedCount: number;
+};
+
+export const useAddRecordsToList = () => {
+  const [addRecordsToListMutation, mutationState] = useMutation<
+    { addRecordsToList: AddRecordsToListResult },
+    { input: { recordListId: string; sourceRecordIds: string[] } }
+  >(ADD_RECORDS_TO_LIST);
+
+  const addRecordsToList = async ({
+    parentObjectMetadataId,
+    ...input
+  }: {
+    recordListId: string;
+    sourceRecordIds: string[];
+    parentObjectMetadataId: string;
+  }) => {
+    const result = await addRecordsToListMutation({
+      variables: { input },
+      update: (cache) => {
+        evictRecordListEntriesFromCache(cache, input.recordListId);
+      },
+      refetchQueries: input.sourceRecordIds.map((sourceRecordId) => ({
+        query: FIND_RECORD_LIST_MEMBERSHIPS,
+        variables: {
+          sourceRecordId,
+          parentObjectMetadataId,
+        },
+      })),
+      awaitRefetchQueries: true,
+    });
+
+    return result.data?.addRecordsToList;
+  };
+
+  return { addRecordsToList, ...mutationState };
+};

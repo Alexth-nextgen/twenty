@@ -477,13 +477,11 @@ export class ObjectMetadataService {
     workspaceId,
     ownerFlatApplication,
     shouldCreateObjectNavigationItems = true,
-    recordListId,
   }: {
     createObjectInput: CreateObjectInput;
     workspaceId: string;
     ownerFlatApplication?: FlatApplication;
     shouldCreateObjectNavigationItems?: boolean;
-    recordListId?: string;
   }): Promise<FlatObjectMetadata> {
     const { workspaceCustomFlatApplication } =
       await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
@@ -571,7 +569,6 @@ export class ObjectMetadataService {
           workspaceId,
           isSystemBuild: false,
           shouldCreateObjectNavigationItems,
-          recordListId,
           applicationUniversalIdentifier:
             resolvedOwnerFlatApplication.universalIdentifier,
         },

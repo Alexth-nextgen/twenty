@@ -1,0 +1,9 @@
+{
+  "applicationUniversalIdentifier": "5f1d0c2e-9a44-4a3b-8f2f-6a1b2c3d4e5f",
+  "applicationVersion": "1.0.0",
+  "hostCapability": "native-app-host@^1",
+  "hostSupportedRange": ">=1.0.0 <2.0.0",
+  "minimumTwentyVersion": "2.39.0",
+  "supportedTwentyVersions": ["2.39.0"],
+  "status": "supported"
+}

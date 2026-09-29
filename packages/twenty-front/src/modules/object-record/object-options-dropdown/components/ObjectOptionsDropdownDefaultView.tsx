@@ -25,7 +25,7 @@ import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
 
 export const ObjectOptionsDropdownDefaultView = () => {
   const { t } = useLingui();
-  const { recordIndexId, onContentChange, dropdownId } =
+  const { recordIndexId, onContentChange, dropdownId, additionalPage } =
     useObjectOptionsDropdown();
 
   const { currentView } = useGetCurrentViewOnly();
@@ -39,6 +39,7 @@ export const ObjectOptionsDropdownDefaultView = () => {
 
   const selectableItemIdArray = [
     'Fields',
+    ...(additionalPage ? ['Additional'] : []),
     'Copy link to view',
     'Create custom view',
   ];
@@ -92,6 +93,26 @@ export const ObjectOptionsDropdownDefaultView = () => {
             >{t`Fields`}</ListItem>
           </SelectableListItem>
         </DropdownMenuItemsContainer>
+        {additionalPage && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItemsContainer scrollable={false}>
+              <SelectableListItem
+                itemId="Additional"
+                onEnter={() => onContentChange('additional')}
+              >
+                <ListItem
+                  focused={selectedItemId === 'Additional'}
+                  onClick={() => onContentChange('additional')}
+                  startIcon={<IconListDetails />}
+                  hasSubmenu
+                >
+                  {additionalPage.label}
+                </ListItem>
+              </SelectableListItem>
+            </DropdownMenuItemsContainer>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItemsContainer scrollable={false}>
           <SelectableListItem

@@ -1,4 +1,5 @@
 import { useObjectPermissionsForObject } from '@/object-record/hooks/useObjectPermissionsForObject';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { RecordBoardContext } from '@/object-record/record-board/contexts/RecordBoardContext';
 import { RecordBoardColumnContext } from '@/object-record/record-board/record-board-column/contexts/RecordBoardColumnContext';
 import { isRecordBoardCellsNonEditableComponentState } from '@/object-record/record-board/states/isRecordBoardCellsNonEditableComponentState';
@@ -35,6 +36,7 @@ const StyledNewButton = styled.button`
 
 export const RecordBoardColumnNewRecordButton = () => {
   const theme = useTheme();
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
   const { objectMetadataItem, selectFieldMetadataItem } =
     useContext(RecordBoardContext);
 
@@ -67,7 +69,7 @@ export const RecordBoardColumnNewRecordButton = () => {
     return null;
   }
 
-  if (isRecordBoardCellsNonEditable) {
+  if (isRecordBoardCellsNonEditable || isRecordCreationDisabled) {
     return null;
   }
 

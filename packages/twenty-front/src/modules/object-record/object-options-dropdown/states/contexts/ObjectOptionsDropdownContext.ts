@@ -2,7 +2,12 @@ import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/Enriche
 import { type ObjectOptionsContentId } from '@/object-record/object-options-dropdown/types/ObjectOptionsContentId';
 import { type ViewType } from '@/views/types/ViewType';
 import { type DraggableListDropResult } from '@/ui/layout/draggable-list/types/DraggableListDropResult';
-import { createContext } from 'react';
+import { type ReactNode, createContext } from 'react';
+
+export type ObjectOptionsDropdownAdditionalPage = {
+  label: string;
+  content: ReactNode;
+};
 
 export type ObjectOptionsDropdownContextValue = {
   recordIndexId: string;
@@ -15,6 +20,7 @@ export type ObjectOptionsDropdownContextValue = {
   handleRecordGroupOrderChangeWithModal?: (
     result: DraggableListDropResult,
   ) => void;
+  additionalPage?: ObjectOptionsDropdownAdditionalPage;
 };
 
 export const ObjectOptionsDropdownContext =

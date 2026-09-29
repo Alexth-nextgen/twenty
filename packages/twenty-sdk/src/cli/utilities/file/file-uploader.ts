@@ -58,6 +58,12 @@ export class FileUploader {
   private async uploadBatch(
     batch: FileToUpload[],
   ): Promise<FileUploadFailure[]> {
+    const fileBuffersByBuiltPath = new Map(
+      batch.map(({ builtPath }) => [
+        builtPath,
+        fs.readFileSync(path.join(this.appPath, builtPath)),
+      ]),
+    );
     const builtPathByRelativePath = new Map<string, string>(
       batch.map(({ builtPath }) => [
         relative(OUTPUT_DIR, builtPath),
@@ -69,7 +75,7 @@ export class FileUploader {
       ({ builtPath, fileFolder }) => ({
         fileFolder,
         filePath: relative(OUTPUT_DIR, builtPath),
-        size: fs.statSync(path.join(this.appPath, builtPath)).size,
+        size: fileBuffersByBuiltPath.get(builtPath)?.length ?? 0,
       }),
     );
 
@@ -100,10 +106,17 @@ export class FileUploader {
       }
 
       builtPathByFileId.set(target.fileId, builtPath);
+      const fileBuffer = fileBuffersByBuiltPath.get(builtPath);
+
+      if (fileBuffer === undefined) {
+        failures.push({ builtPath, error: 'Built file is no longer available' });
+
+        return;
+      }
 
       try {
         await putFileToUploadUrl({
-          absolutePath: path.join(this.appPath, builtPath),
+          fileBuffer,
           uploadUrl: target.uploadUrl,
           contentType: target.contentType,
         });

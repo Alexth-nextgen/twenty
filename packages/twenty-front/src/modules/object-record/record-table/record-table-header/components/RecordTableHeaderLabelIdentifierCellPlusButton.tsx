@@ -1,6 +1,7 @@
 import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
 import { hasAnySoftDeleteFilterOnViewComponentSelector } from '@/object-record/record-filter/states/hasAnySoftDeleteFilterOnView';
 import { useRecordTableContextOrThrow } from '@/object-record/record-table/contexts/RecordTableContext';
+import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useCreateNewIndexRecord } from '@/object-record/record-table/hooks/useCreateNewIndexRecord';
 import { canCreateRecordsForObjectMetadataItem } from '@/object-record/utils/canCreateRecordsForObjectMetadataItem';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
@@ -18,6 +19,7 @@ const StyledHeaderIcon = styled.div`
 `;
 
 export const RecordTableHeaderLabelIdentifierCellPlusButton = () => {
+  const { isRecordCreationDisabled } = useRecordIndexContextOrThrow();
   const { objectMetadataItem, objectPermissions } =
     useRecordTableContextOrThrow();
 
@@ -42,6 +44,7 @@ export const RecordTableHeaderLabelIdentifierCellPlusButton = () => {
 
   return (
     !isMobile &&
+    !isRecordCreationDisabled &&
     !isLayoutCustomizationModeEnabled &&
     !hasAnySoftDeleteFilterOnView &&
     canCreateRecordsForObjectMetadataItem({
@@ -53,7 +56,7 @@ export const RecordTableHeaderLabelIdentifierCellPlusButton = () => {
           size="sm"
           emphasis="subtle"
           onClick={handlePlusButtonClick}
-          aria-label={t`Add field`}
+          aria-label={t`Create record`}
         >
           <IconPlus />
         </LightIconButton>

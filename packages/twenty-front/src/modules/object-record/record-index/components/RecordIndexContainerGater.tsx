@@ -21,8 +21,9 @@ import { PageCardLayout } from '@/ui/layout/page/components/PageCardLayout';
 import { PageTitle } from '@/ui/utilities/page-title/components/PageTitle';
 import { ViewComponentInstanceContext } from '@/views/states/contexts/ViewComponentInstanceContext';
 import { styled } from '@linaria/react';
-import { useCallback } from 'react';
+import { type ReactNode, useCallback } from 'react';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
+import { type ObjectOptionsDropdownAdditionalPage } from '@/object-record/object-options-dropdown/states/contexts/ObjectOptionsDropdownContext';
 
 const StyledIndexContainer = styled.div`
   display: flex;
@@ -31,7 +32,25 @@ const StyledIndexContainer = styled.div`
   width: 100%;
 `;
 
-export const RecordIndexContainerGater = () => {
+type RecordIndexContainerGaterProps = {
+  header?: ReactNode;
+  indexIdentifierUrl?: (recordId: string) => string;
+  isRecordCreationDisabled?: boolean;
+  onOpenRecord?: (recordId: string) => void;
+  pageTitle?: string;
+  secondaryBarRightComponent?: ReactNode;
+  optionsDropdownAdditionalPage?: ObjectOptionsDropdownAdditionalPage;
+};
+
+export const RecordIndexContainerGater = ({
+  header,
+  indexIdentifierUrl: customIndexIdentifierUrl,
+  isRecordCreationDisabled,
+  onOpenRecord,
+  pageTitle,
+  secondaryBarRightComponent,
+  optionsDropdownAdditionalPage,
+}: RecordIndexContainerGaterProps = {}) => {
   const setLastShowPageRecordId = useSetAtomComponentState(
     lastShowPageRecordIdState,
   );
@@ -44,9 +63,10 @@ export const RecordIndexContainerGater = () => {
     setLastShowPageRecordId(null);
   }, [setLastShowPageRecordId]);
 
-  const { indexIdentifierUrl } = useHandleIndexIdentifierClick({
-    objectMetadataItem,
-  });
+  const { indexIdentifierUrl: defaultIndexIdentifierUrl } =
+    useHandleIndexIdentifierClick({
+      objectMetadataItem,
+    });
 
   const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
   const objectPermissions = getObjectPermissionsForObject(
@@ -89,7 +109,10 @@ export const RecordIndexContainerGater = () => {
         objectNameSingular: objectMetadataItem.nameSingular,
         objectMetadataItem,
         onIndexRecordsLoaded: handleIndexRecordsLoaded,
-        indexIdentifierUrl,
+        indexIdentifierUrl:
+          customIndexIdentifierUrl ?? defaultIndexIdentifierUrl,
+        isRecordCreationDisabled,
+        onOpenRecord,
         recordFieldByFieldMetadataItemId,
         labelIdentifierFieldMetadataItem,
         fieldMetadataItemByFieldMetadataItemId,
@@ -107,10 +130,19 @@ export const RecordIndexContainerGater = () => {
               instanceId: getCommandMenuIdFromRecordIndexId(recordIndexId),
             }}
           >
-            <PageTitle title={objectMetadataItem.labelPlural} />
+            <PageTitle title={pageTitle ?? objectMetadataItem.labelPlural} />
             <PageCardLayout
-              header={<RecordIndexPageHeader />}
-              secondaryBar={hasObjectReadPermissions && <RecordIndexViewBar />}
+              header={header ?? <RecordIndexPageHeader />}
+              secondaryBar={
+                hasObjectReadPermissions && (
+                  <RecordIndexViewBar
+                    additionalActions={secondaryBarRightComponent}
+                    optionsDropdownAdditionalPage={
+                      optionsDropdownAdditionalPage
+                    }
+                  />
+                )
+              }
             >
               {indexContent}
             </PageCardLayout>

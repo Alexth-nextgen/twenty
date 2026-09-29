@@ -10,6 +10,7 @@ import {
 import { useFieldsWidgetFields } from '@/page-layout/widgets/fields/hooks/useFieldsWidgetFields';
 import { buildDefaultFieldsWidgetGroups } from '@/page-layout/widgets/fields/utils/buildDefaultFieldsWidgetGroups';
 import { filterDraftGroupsForDisplay } from '@/page-layout/widgets/fields/utils/filterDraftGroupsForDisplay';
+import { isRecordListMembershipRelationField } from '@/page-layout/widgets/fields/utils/isRecordListMembershipRelationField';
 import { useViewById } from '@/views/hooks/useViewById';
 import { useMemo } from 'react';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
@@ -46,7 +47,10 @@ export const useFieldsWidgetGroups = ({
       return { groups: [], displayMode: 'grouped' };
     }
 
-    const activeFields = visibleFields.filter((field) => field.isActive);
+    const activeFields = visibleFields.filter(
+      (field) =>
+        field.isActive && !isRecordListMembershipRelationField(field),
+    );
 
     if (isDefined(view) && isNonEmptyArray(view.viewFieldGroups)) {
       const sortedGroups = view.viewFieldGroups.toSorted(

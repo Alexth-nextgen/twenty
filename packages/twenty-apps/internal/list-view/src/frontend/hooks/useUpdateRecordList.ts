@@ -1,0 +1,36 @@
+import { useMutation } from '@apollo/client/react';
+
+import { UPDATE_RECORD_LIST } from '../graphql/mutations/updateRecordList';
+import { FIND_RECORD_LIST } from '../graphql/queries/findRecordList';
+import { FIND_RECORD_LISTS } from '../graphql/queries/findRecordLists';
+import { type RecordList } from '../types/RecordList';
+
+export const useUpdateRecordList = (recordListId: string) => {
+  const [updateRecordListMutation, mutationState] = useMutation<
+    { updateRecordList: RecordList },
+    {
+      input: {
+        id: string;
+        name?: string;
+        icon?: string | null;
+        position?: number;
+      };
+    }
+  >(UPDATE_RECORD_LIST, {
+    refetchQueries: [
+      { query: FIND_RECORD_LISTS },
+      { query: FIND_RECORD_LIST, variables: { id: recordListId } },
+    ],
+  });
+
+  const updateRecordList = async (input: {
+    name?: string;
+    icon?: string | null;
+    position?: number;
+  }) =>
+    await updateRecordListMutation({
+      variables: { input: { id: recordListId, ...input } },
+    });
+
+  return { updateRecordList, ...mutationState };
+};

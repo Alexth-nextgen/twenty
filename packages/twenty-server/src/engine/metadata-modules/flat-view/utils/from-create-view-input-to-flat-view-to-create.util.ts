@@ -71,7 +71,6 @@ export const fromCreateViewInputToFlatViewToCreate = ({
   const flatViewToCreate: UniversalFlatView & { id: string } = {
     id: viewId,
     objectMetadataUniversalIdentifier,
-    recordListId: null,
     name: createViewInput.name,
     createdAt,
     updatedAt: createdAt,

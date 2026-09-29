@@ -9,7 +9,7 @@
       "options": {
         "outputPath": "{projectRoot}/build"
       },
-      "dependsOn": ["^build"]
+      "dependsOn": ["prepare-native-apps", "^build"]
     },
     "build:sourcemaps": {
       "outputs": ["{options.outputPath}"],
@@ -25,11 +25,16 @@
       }
     },
     "start": {
+      "dependsOn": ["prepare-native-apps"],
       "executor": "@nx/vite:dev-server",
       "options": {
         "buildTarget": "twenty-front:build",
         "hmr": true
       }
+    },
+    "prepare-native-apps": {
+      "executor": "nx:run-commands",
+      "options": { "command": "node tools/native-apps/build.mjs" }
     },
     "preview": {
       "executor": "@nx/vite:preview-server",

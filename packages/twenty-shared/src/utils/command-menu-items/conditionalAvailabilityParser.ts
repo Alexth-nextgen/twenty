@@ -45,6 +45,14 @@ conditionalAvailabilityParser.functions.isDefined = (value: unknown) =>
 conditionalAvailabilityParser.functions.isNonEmptyString = (value: unknown) =>
   isNonEmptyString(value);
 
+conditionalAvailabilityParser.functions.startsWith = (
+  value: unknown,
+  prefix: unknown,
+) =>
+  typeof value === 'string' &&
+  typeof prefix === 'string' &&
+  value.startsWith(prefix);
+
 conditionalAvailabilityParser.functions.includes = (
   array: unknown,
   value: unknown,

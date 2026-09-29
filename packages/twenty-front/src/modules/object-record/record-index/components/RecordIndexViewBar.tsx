@@ -1,3 +1,7 @@
+import { type ReactNode } from 'react';
+
+import { type ObjectOptionsDropdownAdditionalPage } from '@/object-record/object-options-dropdown/states/contexts/ObjectOptionsDropdownContext';
+
 import { ObjectOptionsDropdown } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdown';
 import { RecordIndexViewBarEffect } from '@/object-record/record-index/components/RecordIndexViewBarEffect';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
@@ -8,7 +12,13 @@ import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/use
 import { ViewBar } from '@/views/components/ViewBar';
 import { ViewType } from '@/views/types/ViewType';
 
-export const RecordIndexViewBar = () => {
+export const RecordIndexViewBar = ({
+  additionalActions,
+  optionsDropdownAdditionalPage,
+}: {
+  additionalActions?: ReactNode;
+  optionsDropdownAdditionalPage?: ObjectOptionsDropdownAdditionalPage;
+}) => {
   const recordIndexViewType = useAtomComponentStateValue(
     recordIndexViewTypeState,
   );
@@ -25,11 +35,15 @@ export const RecordIndexViewBar = () => {
         isReadOnly={hasCurrentViewNonReadableFields}
         viewBarId={recordIndexId}
         optionsDropdownButton={
-          <ObjectOptionsDropdown
-            recordIndexId={recordIndexId}
-            objectMetadataItem={objectMetadataItem}
-            viewType={recordIndexViewType ?? ViewType.TABLE}
-          />
+          <>
+            <ObjectOptionsDropdown
+              recordIndexId={recordIndexId}
+              objectMetadataItem={objectMetadataItem}
+              viewType={recordIndexViewType ?? ViewType.TABLE}
+              additionalPage={optionsDropdownAdditionalPage}
+            />
+            {additionalActions}
+          </>
         }
       />
       <RecordIndexViewBarEffect

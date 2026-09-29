@@ -54,6 +54,7 @@ export const ObjectOptionsDropdownCustomView = ({
     onContentChange,
     closeDropdown,
     dropdownId,
+    additionalPage,
   } = useObjectOptionsDropdown();
 
   const { currentView } = useGetCurrentViewOnly();
@@ -123,6 +124,7 @@ export const ObjectOptionsDropdownCustomView = ({
       ? ['CalendarDateField', 'CalendarView']
       : []),
     ...(customViewData?.type !== ViewType.CALENDAR ? ['Group'] : []),
+    ...(additionalPage ? ['Additional'] : []),
     'Delete view',
   ];
 
@@ -276,6 +278,21 @@ export const ObjectOptionsDropdownCustomView = ({
                 </SelectableListItem>
               </div>
             </Tooltip>
+          )}
+          {additionalPage && (
+            <SelectableListItem
+              itemId="Additional"
+              onEnter={() => onContentChange('additional')}
+            >
+              <ListItem
+                focused={selectedItemId === 'Additional'}
+                onClick={() => onContentChange('additional')}
+                startIcon={<IconListDetails />}
+                hasSubmenu
+              >
+                {additionalPage.label}
+              </ListItem>
+            </SelectableListItem>
           )}
         </DropdownMenuItemsContainer>
         <DropdownMenuSeparator />

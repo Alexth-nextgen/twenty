@@ -11,6 +11,7 @@ import { useRecordShowPage } from '@/object-record/record-show/hooks/useRecordSh
 import { useRecordShowPageResource } from '@/object-record/record-show/hooks/useRecordShowPageResource';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
+import { NativeAppRecordSections } from '@/app/native-extension-host/components/NativeAppSlot';
 
 type RecordShowPageParameters = {
   objectNameSingular?: string;
@@ -26,6 +27,10 @@ const WorkspaceRecordShowPageContent = ({
     parameters.objectNameSingular ?? '',
     parameters.objectRecordId ?? '',
   );
+  const { objectMetadataItems } = useObjectMetadataItems();
+  const objectMetadataItem = objectMetadataItems.find(
+    (item) => item.nameSingular === objectNameSingular,
+  );
 
   const { error, loading, record } = useRecordShowPageResource({
     objectNameSingular,
@@ -39,6 +44,15 @@ const WorkspaceRecordShowPageContent = ({
       record={record}
       loading={loading}
       error={error}
+      contentTrailingElement={
+        isDefined(objectMetadataItem) ? (
+          <NativeAppRecordSections
+            objectName={objectNameSingular}
+            sourceRecordId={objectRecordId}
+            parentObjectMetadataId={objectMetadataItem.id}
+          />
+        ) : undefined
+      }
     />
   );
 };

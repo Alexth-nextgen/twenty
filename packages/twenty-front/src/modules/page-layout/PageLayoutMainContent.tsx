@@ -5,13 +5,17 @@ import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutIn
 import { usePageLayoutTabWithVisibleWidgetsOrThrow } from '@/page-layout/hooks/usePageLayoutTabWithVisibleWidgetsOrThrow';
 import { getTabLayoutMode } from '@/page-layout/utils/getTabLayoutMode';
 import { getTabPresentation } from '@/page-layout/utils/getTabPresentation';
+import { type ReactNode } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 
 type PageLayoutMainContentProps = {
   tabId: string;
+  contentTrailingElement?: ReactNode;
 };
 
 export const PageLayoutMainContent = ({
   tabId,
+  contentTrailingElement,
 }: PageLayoutMainContentProps) => {
   const { currentPageLayout } = useCurrentPageLayoutOrThrow();
   const activeTab = usePageLayoutTabWithVisibleWidgetsOrThrow(tabId);
@@ -34,6 +38,14 @@ export const PageLayoutMainContent = ({
         tabId,
         layoutMode,
         presentation,
+        ...(isDefined(contentTrailingElement)
+          ? {
+              contentAfterWidget: {
+                widgetTitle: 'Opportunities',
+                element: contentTrailingElement,
+              },
+            }
+          : {}),
       }}
     >
       <PageLayoutContent />

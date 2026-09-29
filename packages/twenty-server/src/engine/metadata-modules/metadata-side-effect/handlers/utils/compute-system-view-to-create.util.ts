@@ -43,19 +43,16 @@ export const computeSystemViewToCreate = ({
   objectMetadata,
   applicationUniversalIdentifier,
   viewKey,
-  recordListId,
 }: {
   applicationUniversalIdentifier: string;
   objectMetadata: SystemViewObjectMetadata;
   viewKey: SystemViewKey;
-  recordListId?: string;
 }): UniversalFlatView & { id: string } => {
   const { type, icon, computeName } =
     SYSTEM_VIEW_PROPERTIES_BY_VIEW_KEY[viewKey];
 
   return buildBaseUniversalFlatView({
     objectMetadataUniversalIdentifier: objectMetadata.universalIdentifier,
-    recordListId: recordListId ?? null,
     applicationUniversalIdentifier,
     universalIdentifier: getSystemViewUniversalIdentifier({
       objectMetadataApplicationUniversalIdentifier:

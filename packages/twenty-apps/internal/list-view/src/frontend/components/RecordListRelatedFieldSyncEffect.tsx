@@ -1,0 +1,200 @@
+import { useMutation } from '@apollo/client/react';
+import { useCallback, useEffect } from 'react';
+
+import { useUpdateOneRecord } from '@/app/native-extension-host/api/modules/object-record/hooks/useUpdateOneRecord';
+import { type EnrichedObjectMetadataItem } from '@/app/native-extension-host/api/modules/object-metadata/types/EnrichedObjectMetadataItem';
+import { useSnackBar } from '@/app/native-extension-host/api/modules/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { t } from '@lingui/core/macro';
+import { SYNC_RECORD_LIST_RELATED_FIELD } from '../graphql/mutations/syncRecordListRelatedField';
+
+const OBJECT_RECORD_OPERATION_EVENT_NAME =
+  'object-record-operation-browser-event';
+const RELATED_FIELD_NAME_PREFIX = 'relatedField';
+
+type RecordUpdate = {
+  recordId: string;
+  updatedFields: Record<string, unknown>[];
+};
+
+type RecordOperationEventDetail = {
+  objectMetadataItem: { id: string };
+  operation: {
+    type: string;
+    result?: {
+      updateInput?: RecordUpdate;
+      updateInputs?: RecordUpdate[];
+    };
+  };
+};
+
+type RecordListRelatedFieldSyncEffectProps = {
+  recordListId: string;
+  parentObjectMetadataItem: EnrichedObjectMetadataItem;
+  entryObjectMetadataItem: EnrichedObjectMetadataItem;
+  getSourceRecordId: (entryRecordId: string) => string | null;
+};
+
+export const RecordListRelatedFieldSyncEffect = ({
+  recordListId,
+  parentObjectMetadataItem,
+  entryObjectMetadataItem,
+  getSourceRecordId,
+}: RecordListRelatedFieldSyncEffectProps) => {
+  const [syncSourceChangesToEntries] = useMutation(
+    SYNC_RECORD_LIST_RELATED_FIELD,
+  );
+  const { updateOneRecord } = useUpdateOneRecord();
+  const { enqueueErrorSnackBar } = useSnackBar();
+
+  const handleRecordOperation = useCallback(
+    async (detail: RecordOperationEventDetail) => {
+      const updates =
+        detail.operation.type === 'update-one'
+          ? detail.operation.result?.updateInput
+            ? [detail.operation.result.updateInput]
+            : []
+          : detail.operation.type === 'update-many'
+            ? (detail.operation.result?.updateInputs ?? [])
+            : [];
+
+      if (updates.length === 0) {
+        return;
+      }
+
+      if (detail.objectMetadataItem.id === parentObjectMetadataItem.id) {
+        const changedSourceFieldNames = new Set(
+          updates.flatMap((update) =>
+            update.updatedFields.flatMap((fieldUpdate) =>
+              Object.keys(fieldUpdate),
+            ),
+          ),
+        );
+        const matchingSourceFields = parentObjectMetadataItem.fields.filter(
+          (field) =>
+            changedSourceFieldNames.has(field.name) &&
+            entryObjectMetadataItem.fields.some(
+              (entryField) =>
+                entryField.name ===
+                `${RELATED_FIELD_NAME_PREFIX}${field.id.replace(/-/g, '')}`,
+            ),
+        );
+
+        await Promise.all(
+          updates.flatMap((update) =>
+            matchingSourceFields
+              .filter((field) =>
+                update.updatedFields.some(
+                  (fieldUpdate) => field.name in fieldUpdate,
+                ),
+              )
+              .map((field) =>
+                syncSourceChangesToEntries({
+                  variables: {
+                    recordListId,
+                    sourceFieldMetadataId: field.id,
+                    sourceRecordId: update.recordId,
+                  },
+                }),
+              ),
+          ),
+        );
+
+        return;
+      }
+
+      if (detail.objectMetadataItem.id !== entryObjectMetadataItem.id) {
+        return;
+      }
+
+      await Promise.all(
+        updates.map(async (update) => {
+          const sourceRecordId = getSourceRecordId(update.recordId);
+
+          if (!sourceRecordId) {
+            return;
+          }
+
+          const sourceRecordUpdates = Object.fromEntries(
+            update.updatedFields.flatMap((fieldUpdate) => {
+              const [entryFieldName, value] =
+                Object.entries(fieldUpdate)[0] ?? [];
+
+              if (!entryFieldName?.startsWith(RELATED_FIELD_NAME_PREFIX)) {
+                return [];
+              }
+
+              const compactSourceFieldId = entryFieldName.slice(
+                RELATED_FIELD_NAME_PREFIX.length,
+              );
+              const sourceField = parentObjectMetadataItem.fields.find(
+                (field) => field.id.replace(/-/g, '') === compactSourceFieldId,
+              );
+
+              return sourceField ? [[sourceField.name, value]] : [];
+            }),
+          );
+
+          if (Object.keys(sourceRecordUpdates).length === 0) {
+            return;
+          }
+
+          try {
+            await updateOneRecord({
+              objectNameSingular: parentObjectMetadataItem.nameSingular,
+              idToUpdate: sourceRecordId,
+              updateOneRecordInput: sourceRecordUpdates,
+            });
+          } catch {
+            enqueueErrorSnackBar({
+              message: t`Could not update the related Person or Company field.`,
+            });
+            await Promise.all(
+              Object.keys(sourceRecordUpdates).map((sourceFieldName) => {
+                const sourceField = parentObjectMetadataItem.fields.find(
+                  (field) => field.name === sourceFieldName,
+                );
+
+                return sourceField
+                  ? syncSourceChangesToEntries({
+                      variables: {
+                        recordListId,
+                        sourceFieldMetadataId: sourceField.id,
+                        sourceRecordId,
+                      },
+                    })
+                  : Promise.resolve();
+              }),
+            );
+          }
+        }),
+      );
+    },
+    [
+      entryObjectMetadataItem,
+      enqueueErrorSnackBar,
+      getSourceRecordId,
+      parentObjectMetadataItem,
+      recordListId,
+      syncSourceChangesToEntries,
+      updateOneRecord,
+    ],
+  );
+
+  useEffect(() => {
+    const handleEvent = (event: Event) => {
+      const detail = (event as CustomEvent<RecordOperationEventDetail>).detail;
+      void handleRecordOperation(detail).catch(() => undefined);
+    };
+
+    window.addEventListener(OBJECT_RECORD_OPERATION_EVENT_NAME, handleEvent);
+
+    return () => {
+      window.removeEventListener(
+        OBJECT_RECORD_OPERATION_EVENT_NAME,
+        handleEvent,
+      );
+    };
+  }, [handleRecordOperation]);
+
+  return null;
+};

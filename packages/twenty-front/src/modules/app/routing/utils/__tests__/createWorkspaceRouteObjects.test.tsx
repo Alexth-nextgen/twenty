@@ -4,7 +4,7 @@ import { createMemoryRouter, matchRoutes } from 'react-router-dom';
 
 import { getWorkspaceRouteObjectsForSurface } from '@/app/routing/utils/getWorkspaceRouteObjectsForSurface';
 import { createWorkspaceRouteObjects } from '@/app/routing/utils/createWorkspaceRouteObjects';
-import { RECORD_LIST_PATH } from '@/record-list/constants/RecordListPath';
+import { getNativeAppRoutePaths } from '@/app/native-extension-host/utils/nativeAppRegistry';
 import {
   isWorkspaceLocationAvailableOnSurface,
   isWorkspaceLocationExpandableFromSidePanel,
@@ -42,11 +42,13 @@ describe('workspace route objects', () => {
       'side-panel',
     );
 
+    // Native app routes are registry-driven, so the assertion follows the
+    // registry instead of hard-coding the apps currently installed.
     expect(panelRoutes.map(({ path }) => path)).toEqual([
       AppPath.WorkflowCoreShowPage,
       AppPath.RecordIndexPage,
       AppPath.RecordShowPage,
-      RECORD_LIST_PATH,
+      ...getNativeAppRoutePaths(),
       SETTINGS_ROOT_PATH,
     ]);
 

@@ -12,7 +12,6 @@ const objectMetadata = {
   universalIdentifier: objectUniversalIdentifier,
   labelSingular: 'Ticket',
 };
-const recordListId = 'c1c2c3c4-c5c6-4000-8000-000000000001';
 
 describe('computeSystemViewToCreate', () => {
   it.each([SYSTEM_VIEW_KEYS.INDEX, SYSTEM_VIEW_KEYS.FIELDS_WIDGET])(
@@ -55,15 +54,14 @@ describe('computeSystemViewToCreate', () => {
     );
   });
 
-  it('should associate an INDEX view with its record list', () => {
+  it('should stay free of product-specific ownership fields', () => {
     const result = computeSystemViewToCreate({
       applicationUniversalIdentifier,
       objectMetadata,
       viewKey: SYSTEM_VIEW_KEYS.INDEX,
-      recordListId,
     });
 
-    expect(result.recordListId).toBe(recordListId);
+    expect(Object.keys(result)).not.toContain('recordListId');
   });
 
   it('should build a system-owned record-page view with a null persisted key', () => {

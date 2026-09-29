@@ -1,0 +1,1066 @@
+import { styled } from '@linaria/react';
+import { t } from '@lingui/core/macro';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { isDefined } from 'twenty-shared/utils';
+import { Button } from 'twenty-ui/primitives/input';
+import { LightIconButton } from 'twenty-ui/components';
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from 'twenty-ui/icon';
+import { Dialog } from 'twenty-ui/primitives/surfaces';
+import {
+  MAIN_COLOR_NAMES,
+  type ThemeColor,
+  themeCssVariables,
+} from 'twenty-ui/theme';
+
+import { RECORD_LIST_SETTINGS_MODAL_ID } from '../constants/RecordListSettingsModalId';
+import { useDeleteRecordList } from '../hooks/useDeleteRecordList';
+import { useUpdateRecordList } from '../hooks/useUpdateRecordList';
+import { type RecordList } from '../types/RecordList';
+import { useSnackBar } from '@/app/native-extension-host/api/modules/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { ConfirmationModal } from '@/app/native-extension-host/api/modules/ui/layout/modal/components/ConfirmationModal';
+import { ModalStatefulWrapper } from '@/app/native-extension-host/api/modules/ui/layout/modal/components/ModalStatefulWrapper';
+import { useModal } from '@/app/native-extension-host/api/modules/ui/layout/modal/hooks/useModal';
+import { IconPicker } from '@/app/native-extension-host/api/modules/ui/input/components/IconPicker';
+import { useFilteredObjectMetadataItems } from '@/app/native-extension-host/api/modules/object-metadata/hooks/useFilteredObjectMetadataItems';
+import { useFieldMetadataItem } from '@/app/native-extension-host/api/modules/object-metadata/hooks/useFieldMetadataItem';
+import { useUpdateOneFieldMetadataItem } from '@/app/native-extension-host/api/modules/object-metadata/hooks/useUpdateOneFieldMetadataItem';
+import {
+  type FieldMetadataItem,
+  type FieldMetadataItemOption,
+} from '@/app/native-extension-host/api/modules/object-metadata/types/FieldMetadataItem';
+import { FieldMetadataType } from '@/app/native-extension-host/api/generated-metadata/graphql';
+import camelCase from 'lodash.camelcase';
+import { useAtomFamilySelectorValue } from '@/app/native-extension-host/api/modules/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
+import { viewsFromObjectMetadataItemFamilySelector } from '@/app/native-extension-host/api/modules/views/states/selectors/viewsFromObjectMetadataItemFamilySelector';
+import { ViewType } from '@/app/native-extension-host/api/modules/views/types/ViewType';
+import { v4 } from 'uuid';
+import {
+  type RecordListTemplate,
+  type RecordListTemplateField,
+} from '../constants/recordListTemplates';
+import { saveCustomRecordListTemplate } from '../utils/customRecordListTemplates';
+
+const StyledHeader = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+`;
+
+const StyledContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[4]};
+`;
+
+const StyledLabel = styled.label`
+  color: ${themeCssVariables.font.color.secondary};
+  display: flex;
+  flex-direction: column;
+  font-size: ${themeCssVariables.font.size.sm};
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledInput = styled.input`
+  background: ${themeCssVariables.background.primary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.md};
+  color: ${themeCssVariables.font.color.primary};
+  font-family: ${themeCssVariables.font.family};
+  font-size: ${themeCssVariables.font.size.md};
+  min-height: 40px;
+  padding: 0 ${themeCssVariables.spacing[3]};
+`;
+
+const StyledNameRow = styled.div`
+  align-items: center;
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledFields = styled.div`
+  border: 1px solid ${themeCssVariables.border.color.light};
+  border-radius: ${themeCssVariables.border.radius.md};
+  display: flex;
+  flex-direction: column;
+`;
+
+const StyledFieldRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[2]};
+  min-height: 40px;
+  padding: ${themeCssVariables.spacing[1]} ${themeCssVariables.spacing[2]};
+
+  & + & {
+    border-top: 1px solid ${themeCssVariables.border.color.light};
+  }
+`;
+
+const StyledFieldInput = styled(StyledInput)`
+  font-size: ${themeCssVariables.font.size.sm};
+  flex: 1;
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[2]};
+`;
+
+const StyledOptionList = styled.div`
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[1]};
+  padding: 0 ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[1]};
+  width: 100%;
+`;
+
+const StyledOptionRow = styled.div`
+  align-items: center;
+  display: grid;
+  gap: ${themeCssVariables.spacing[1]};
+  grid-template-columns: minmax(0, 1fr) 104px repeat(3, 28px);
+`;
+
+const StyledAddOptionRow = styled(StyledOptionRow)`
+  grid-template-columns: minmax(0, 1fr) 28px;
+`;
+
+const StyledAddFieldRow = styled.div`
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+const StyledSelect = styled.select`
+  background: ${themeCssVariables.background.primary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
+  border-radius: ${themeCssVariables.border.radius.md};
+  color: ${themeCssVariables.font.color.primary};
+  font-size: ${themeCssVariables.font.size.sm};
+  min-height: 34px;
+  padding: 0 ${themeCssVariables.spacing[2]};
+`;
+
+const StyledObjectType = styled.div`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-size: ${themeCssVariables.font.size.sm};
+`;
+
+const StyledHelpText = styled.div`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-size: ${themeCssVariables.font.size.xs};
+  line-height: 1.4;
+`;
+
+const StyledFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+`;
+
+const StyledActions = styled.div`
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+type RecordListSettingsModalProps = {
+  recordList: RecordList;
+  objectLabelPlural: string;
+};
+
+const DELETE_RECORD_LIST_FIELD_MODAL_ID = 'delete-record-list-field-modal';
+
+const RECORD_LIST_FIELD_TYPES = [
+  {
+    type: FieldMetadataType.TEXT,
+    label: t`Text`,
+    icon: 'IconTextSize',
+  },
+  {
+    type: FieldMetadataType.NUMBER,
+    label: t`Number`,
+    icon: 'IconNumber123',
+  },
+  {
+    type: FieldMetadataType.DATE,
+    label: t`Date`,
+    icon: 'IconCalendar',
+  },
+  {
+    type: FieldMetadataType.BOOLEAN,
+    label: t`Checkbox`,
+    icon: 'IconCheckbox',
+  },
+  {
+    type: FieldMetadataType.SELECT,
+    label: t`Select`,
+    icon: 'IconTag',
+  },
+] as const;
+
+const createDefaultSelectOptions = () => [
+  { id: v4(), label: t`New`, value: 'NEW', position: 0, color: 'gray' },
+  {
+    id: v4(),
+    label: t`In progress`,
+    value: 'IN_PROGRESS',
+    position: 1,
+    color: 'blue',
+  },
+  { id: v4(), label: t`Done`, value: 'DONE', position: 2, color: 'green' },
+];
+
+export const RecordListSettingsModal = ({
+  recordList,
+  objectLabelPlural,
+}: RecordListSettingsModalProps) => {
+  const [name, setName] = useState(recordList.name);
+  const [icon, setIcon] = useState(recordList.icon ?? 'IconList');
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newFieldType, setNewFieldType] = useState<FieldMetadataType>(
+    FieldMetadataType.TEXT,
+  );
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [defaultViewId, setDefaultViewId] = useState(
+    recordList.defaultViewId ?? '',
+  );
+  const [isDeleteConfirmationVisible, setIsDeleteConfirmationVisible] =
+    useState(false);
+  const [fieldToDelete, setFieldToDelete] = useState<FieldMetadataItem | null>(
+    null,
+  );
+  const [isCreatingField, setIsCreatingField] = useState(false);
+  const [isDeletingField, setIsDeletingField] = useState(false);
+  const { updateRecordList, loading: isUpdating } = useUpdateRecordList(
+    recordList.id,
+  );
+  const { deleteRecordList, loading: isDeleting } = useDeleteRecordList();
+  const { closeModal, openModal } = useModal();
+  const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
+  const navigate = useNavigate();
+  const { findObjectMetadataItemById } = useFilteredObjectMetadataItems();
+  const entryObjectMetadataItem = findObjectMetadataItemById(
+    recordList.entryObjectMetadataId,
+  );
+  const parentObjectMetadataItem = findObjectMetadataItemById(
+    recordList.parentObjectMetadataId,
+  );
+  const { createMetadataField, deleteMetadataField } = useFieldMetadataItem();
+  const { updateOneFieldMetadataItem } = useUpdateOneFieldMetadataItem();
+  const editableFields =
+    entryObjectMetadataItem?.fields.filter(
+      (field) =>
+        !field.isSystem &&
+        field.name !== 'sourceRecord' &&
+        field.type !== FieldMetadataType.RELATION &&
+        field.type !== FieldMetadataType.MORPH_RELATION,
+    ) ?? [];
+  const listViews = useAtomFamilySelectorValue(
+    viewsFromObjectMetadataItemFamilySelector,
+    { objectMetadataItemId: recordList.entryObjectMetadataId },
+  ).filter((view) => view.type !== ViewType.FIELDS_WIDGET);
+
+  const resetAndClose = () => {
+    setName(recordList.name);
+    setIcon(recordList.icon ?? 'IconList');
+    setNewFieldLabel('');
+    setNewFieldType(FieldMetadataType.TEXT);
+    setIsSavingTemplate(false);
+    setTemplateName('');
+    setDefaultViewId(recordList.defaultViewId ?? '');
+    setIsDeleteConfirmationVisible(false);
+    setFieldToDelete(null);
+    setIsCreatingField(false);
+    closeModal(RECORD_LIST_SETTINGS_MODAL_ID);
+  };
+
+  const handleSave = async () => {
+    try {
+      const nextDefaultViewId = defaultViewId.length > 0 ? defaultViewId : null;
+
+      await updateRecordList({
+        name: name.trim(),
+        icon,
+        ...(nextDefaultViewId !== recordList.defaultViewId
+          ? { defaultViewId: nextDefaultViewId }
+          : {}),
+      });
+      enqueueSuccessSnackBar({ message: t`List settings saved` });
+      resetAndClose();
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to update list` });
+    }
+  };
+
+  const handleCreateField = async () => {
+    const fieldLabel = newFieldLabel.trim();
+
+    if (!entryObjectMetadataItem || fieldLabel.length === 0) {
+      return;
+    }
+
+    setIsCreatingField(true);
+    try {
+      const result = await createMetadataField({
+        objectMetadataId: entryObjectMetadataItem.id,
+        type: newFieldType,
+        name: camelCase(fieldLabel),
+        label: fieldLabel,
+        icon:
+          RECORD_LIST_FIELD_TYPES.find(
+            (fieldType) => fieldType.type === newFieldType,
+          )?.icon ?? 'IconTextSize',
+        description: null,
+        defaultValue: newFieldType === FieldMetadataType.BOOLEAN ? false : null,
+        options:
+          newFieldType === FieldMetadataType.SELECT
+            ? createDefaultSelectOptions()
+            : null,
+        settings: null,
+        isLabelSyncedWithName: true,
+        isUnique: false,
+      });
+
+      if (result.status === 'successful') {
+        setNewFieldLabel('');
+        enqueueSuccessSnackBar({ message: t`List field created` });
+      } else {
+        enqueueErrorSnackBar({ message: t`Failed to create list field` });
+      }
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to create list field` });
+    } finally {
+      setIsCreatingField(false);
+    }
+  };
+
+  const handleRenameField = async (
+    field: FieldMetadataItem,
+    fieldLabel: string,
+  ) => {
+    if (!entryObjectMetadataItem || fieldLabel.trim().length === 0) {
+      return false;
+    }
+
+    try {
+      await updateOneFieldMetadataItem({
+        objectMetadataId: entryObjectMetadataItem.id,
+        fieldMetadataIdToUpdate: field.id,
+        updatePayload: {
+          label: fieldLabel.trim(),
+          isLabelSyncedWithName: false,
+        },
+      });
+      return true;
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to rename list field` });
+      return false;
+    }
+  };
+
+  const handleUpdateSelectOptions = async (
+    field: FieldMetadataItem,
+    options: FieldMetadataItemOption[],
+  ) => {
+    if (!entryObjectMetadataItem) {
+      return false;
+    }
+
+    const result = await updateOneFieldMetadataItem({
+      objectMetadataId: entryObjectMetadataItem.id,
+      fieldMetadataIdToUpdate: field.id,
+      updatePayload: { options },
+    });
+
+    if (result.status !== 'successful') {
+      enqueueErrorSnackBar({ message: t`Failed to update select options` });
+      return false;
+    }
+
+    enqueueSuccessSnackBar({ message: t`Select options updated` });
+    return true;
+  };
+
+  const handleUpdateFieldDescription = async (
+    field: FieldMetadataItem,
+    description: string,
+  ) => {
+    if (!entryObjectMetadataItem) {
+      return false;
+    }
+
+    const result = await updateOneFieldMetadataItem({
+      objectMetadataId: entryObjectMetadataItem.id,
+      fieldMetadataIdToUpdate: field.id,
+      updatePayload: { description: description.trim() || null },
+    });
+
+    if (result.status !== 'successful') {
+      enqueueErrorSnackBar({ message: t`Failed to update field description` });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleUpdateFieldDefaultValue = async (
+    field: FieldMetadataItem,
+    defaultValue: string | number | boolean | null,
+  ) => {
+    if (!entryObjectMetadataItem) {
+      return false;
+    }
+
+    const result = await updateOneFieldMetadataItem({
+      objectMetadataId: entryObjectMetadataItem.id,
+      fieldMetadataIdToUpdate: field.id,
+      updatePayload: { defaultValue },
+    });
+
+    if (result.status !== 'successful') {
+      enqueueErrorSnackBar({ message: t`Failed to update field default` });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRequestDeleteField = (field: FieldMetadataItem) => {
+    setFieldToDelete(field);
+    openModal(DELETE_RECORD_LIST_FIELD_MODAL_ID);
+  };
+
+  const handleConfirmDeleteField = async () => {
+    const fieldMetadataItem = fieldToDelete;
+
+    if (!isDefined(fieldMetadataItem)) {
+      return;
+    }
+
+    setIsDeletingField(true);
+    try {
+      await deleteMetadataField({ idToDelete: fieldMetadataItem.id });
+      enqueueSuccessSnackBar({ message: t`List field deleted` });
+      setFieldToDelete(null);
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to delete list field` });
+    } finally {
+      setIsDeletingField(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isDeleteConfirmationVisible) {
+      setIsDeleteConfirmationVisible(true);
+      return;
+    }
+
+    try {
+      await deleteRecordList(recordList.id);
+      resetAndClose();
+      enqueueSuccessSnackBar({ message: t`List deleted` });
+      navigate('/');
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to delete list` });
+    }
+  };
+
+  const handleSaveTemplate = () => {
+    const trimmedTemplateName = templateName.trim();
+
+    if (
+      trimmedTemplateName.length === 0 ||
+      !isDefined(parentObjectMetadataItem)
+    ) {
+      return;
+    }
+
+    const supportedFieldTypes = new Set<string>(
+      RECORD_LIST_FIELD_TYPES.map((fieldType) => fieldType.type),
+    );
+    const templateFields: RecordListTemplateField[] = editableFields
+      .filter((field) => supportedFieldTypes.has(field.type))
+      .map((field) => ({
+        name: field.name,
+        label: field.label,
+        type: field.type,
+        icon: field.icon ?? 'IconTextSize',
+        ...(field.type === FieldMetadataType.SELECT
+          ? {
+              options: (field.options ?? []).map((option) => ({
+                label: option.label,
+                value: option.value,
+                color: option.color,
+              })),
+            }
+          : {}),
+      }));
+    const template: RecordListTemplate = {
+      key: `custom:${v4()}`,
+      title: trimmedTemplateName,
+      description: t`Custom workflow based on ${recordList.name}`,
+      icon,
+      suggestedObjectNameSingular: parentObjectMetadataItem.nameSingular,
+      categories: [t`Custom`],
+      fieldLabels: templateFields.map((field) => field.label),
+      templateFields,
+    };
+
+    try {
+      saveCustomRecordListTemplate(template);
+      setTemplateName('');
+      setIsSavingTemplate(false);
+      enqueueSuccessSnackBar({ message: t`Template saved` });
+    } catch {
+      enqueueErrorSnackBar({ message: t`Failed to save template` });
+    }
+  };
+
+  return (
+    <>
+      <ModalStatefulWrapper
+        modalInstanceId={RECORD_LIST_SETTINGS_MODAL_ID}
+        isClosable
+        onClose={resetAndClose}
+        size="medium"
+        renderInDocumentBody
+        autoHeight
+      >
+        <Dialog.Header>
+          <StyledHeader>
+            <span>{t`List settings`}</span>
+            <LightIconButton
+              aria-label={t`Close`}
+              size="sm"
+              onClick={resetAndClose}
+            >
+              <IconX />
+            </LightIconButton>
+          </StyledHeader>
+        </Dialog.Header>
+        <Dialog.Body>
+          <StyledContent>
+            <StyledLabel>
+              {t`List name`}
+              <StyledNameRow>
+                <IconPicker
+                  dropdownId={`record-list-${recordList.id}-icon-picker`}
+                  selectedIconKey={icon}
+                  onChange={({ iconKey }) => setIcon(iconKey)}
+                />
+                <StyledInput
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </StyledNameRow>
+            </StyledLabel>
+            <StyledObjectType>
+              {t`Object type: ${objectLabelPlural}`}
+            </StyledObjectType>
+            <StyledLabel>
+              {t`Default view`}
+              <StyledSelect
+                value={defaultViewId}
+                onChange={(event) => setDefaultViewId(event.target.value)}
+              >
+                <option value="">{t`Use first view`}</option>
+                {listViews.map((view) => (
+                  <option key={view.id} value={view.id}>
+                    {view.name}
+                  </option>
+                ))}
+              </StyledSelect>
+            </StyledLabel>
+            <StyledLabel>
+              {t`List fields`}
+              <StyledFields>
+                {editableFields.map((field) => (
+                  <RecordListFieldSettingsRow
+                    key={field.id}
+                    field={field}
+                    onRename={handleRenameField}
+                    onUpdateSelectOptions={handleUpdateSelectOptions}
+                    onUpdateDescription={handleUpdateFieldDescription}
+                    onUpdateDefaultValue={handleUpdateFieldDefaultValue}
+                    onDelete={() => handleRequestDeleteField(field)}
+                  />
+                ))}
+              </StyledFields>
+              <StyledHelpText>
+                {t`List field changes are saved immediately. Deleting a field also permanently deletes its values.`}
+              </StyledHelpText>
+              <StyledAddFieldRow>
+                <StyledSelect
+                  aria-label={t`Field type`}
+                  value={newFieldType}
+                  onChange={(event) =>
+                    setNewFieldType(event.target.value as FieldMetadataType)
+                  }
+                >
+                  {RECORD_LIST_FIELD_TYPES.map((fieldType) => (
+                    <option key={fieldType.type} value={fieldType.type}>
+                      {fieldType.label}
+                    </option>
+                  ))}
+                </StyledSelect>
+                <StyledFieldInput
+                  value={newFieldLabel}
+                  placeholder={t`New list field`}
+                  onChange={(event) => setNewFieldLabel(event.target.value)}
+                />
+                <Button
+                  startIcon={<IconPlus />}
+                  variant="outline"
+                  disabled={newFieldLabel.trim().length === 0}
+                  loading={isCreatingField}
+                  onClick={() => void handleCreateField()}
+                >
+                  {t`Add field`}
+                </Button>
+              </StyledAddFieldRow>
+              {isSavingTemplate ? (
+                <StyledAddFieldRow>
+                  <StyledFieldInput
+                    aria-label={t`Template name`}
+                    value={templateName}
+                    placeholder={t`Template name`}
+                    onChange={(event) => setTemplateName(event.target.value)}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setTemplateName('');
+                      setIsSavingTemplate(false);
+                    }}
+                  >
+                    {t`Cancel`}
+                  </Button>
+                  <Button
+                    color="accent"
+                    variant="solid"
+                    disabled={templateName.trim().length === 0}
+                    onClick={handleSaveTemplate}
+                  >
+                    {t`Save template`}
+                  </Button>
+                </StyledAddFieldRow>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSavingTemplate(true)}
+                >
+                  {t`Save as template`}
+                </Button>
+              )}
+            </StyledLabel>
+          </StyledContent>
+        </Dialog.Body>
+        <Dialog.Footer>
+          <StyledFooter>
+            <Button
+              color="danger"
+              variant="outline"
+              loading={isDeleting}
+              onClick={() => void handleDelete()}
+            >
+              {isDeleteConfirmationVisible ? t`Confirm delete` : t`Delete list`}
+            </Button>
+            <StyledActions>
+              <Button variant="outline" onClick={resetAndClose}>
+                {t`Cancel`}
+              </Button>
+              <Button
+                color="accent"
+                variant="solid"
+                disabled={name.trim().length === 0}
+                loading={isUpdating}
+                onClick={() => void handleSave()}
+              >
+                {t`Save`}
+              </Button>
+            </StyledActions>
+          </StyledFooter>
+        </Dialog.Footer>
+      </ModalStatefulWrapper>
+      <ConfirmationModal
+        modalInstanceId={DELETE_RECORD_LIST_FIELD_MODAL_ID}
+        title={t`Delete ${fieldToDelete?.label ?? ''} field?`}
+        subtitle={t`This permanently deletes the field and all values stored in it. Type "yes" to confirm.`}
+        confirmButtonText={t`Delete field`}
+        loading={isDeletingField}
+        onConfirmClick={() => void handleConfirmDeleteField()}
+        onClose={() => setFieldToDelete(null)}
+      />
+    </>
+  );
+};
+
+const RecordListFieldSettingsRow = ({
+  field,
+  onRename,
+  onUpdateSelectOptions,
+  onUpdateDescription,
+  onUpdateDefaultValue,
+  onDelete,
+}: {
+  field: FieldMetadataItem;
+  onRename: (field: FieldMetadataItem, label: string) => Promise<boolean>;
+  onUpdateSelectOptions: (
+    field: FieldMetadataItem,
+    options: FieldMetadataItemOption[],
+  ) => Promise<boolean>;
+  onUpdateDescription: (
+    field: FieldMetadataItem,
+    description: string,
+  ) => Promise<boolean>;
+  onUpdateDefaultValue: (
+    field: FieldMetadataItem,
+    defaultValue: string | number | boolean | null,
+  ) => Promise<boolean>;
+  onDelete: () => void;
+}) => {
+  const [label, setLabel] = useState(field.label);
+  const [description, setDescription] = useState(field.description ?? '');
+  const initialDefaultValue: unknown = field.defaultValue;
+  const [defaultValue, setDefaultValue] = useState(
+    typeof initialDefaultValue === 'string' ||
+      typeof initialDefaultValue === 'number' ||
+      typeof initialDefaultValue === 'boolean'
+      ? String(initialDefaultValue)
+      : '',
+  );
+  const [options, setOptions] = useState<FieldMetadataItemOption[]>(
+    field.options ?? [],
+  );
+  const [newOptionLabel, setNewOptionLabel] = useState('');
+
+  const handleBlur = async () => {
+    if (label.trim() === field.label) {
+      return;
+    }
+
+    const wasRenamed = await onRename(field, label);
+
+    if (!wasRenamed) {
+      setLabel(field.label);
+    }
+  };
+
+  const handleDescriptionBlur = async () => {
+    if (description.trim() === (field.description ?? '')) {
+      return;
+    }
+
+    const wasUpdated = await onUpdateDescription(field, description);
+
+    if (!wasUpdated) {
+      setDescription(field.description ?? '');
+    }
+  };
+
+  const handleDefaultValueBlur = async () => {
+    const nextDefaultValue =
+      defaultValue.length === 0
+        ? null
+        : field.type === FieldMetadataType.NUMBER
+          ? Number(defaultValue)
+          : field.type === FieldMetadataType.BOOLEAN
+            ? defaultValue === 'true'
+            : defaultValue;
+
+    if (
+      nextDefaultValue === null &&
+      (initialDefaultValue === null || initialDefaultValue === undefined)
+    ) {
+      return;
+    }
+
+    if (await onUpdateDefaultValue(field, nextDefaultValue)) {
+      return;
+    }
+
+    setDefaultValue(
+      typeof initialDefaultValue === 'string' ||
+        typeof initialDefaultValue === 'number' ||
+        typeof initialDefaultValue === 'boolean'
+        ? String(initialDefaultValue)
+        : '',
+    );
+  };
+
+  const handleImmediateDefaultValueChange = async (
+    nextValue: string,
+    parsedValue: string | boolean | null,
+  ) => {
+    setDefaultValue(nextValue);
+
+    if (await onUpdateDefaultValue(field, parsedValue)) {
+      return;
+    }
+
+    setDefaultValue(
+      typeof initialDefaultValue === 'string' ||
+        typeof initialDefaultValue === 'number' ||
+        typeof initialDefaultValue === 'boolean'
+        ? String(initialDefaultValue)
+        : '',
+    );
+  };
+
+  const handleOptionLabelChange = async (
+    optionId: string,
+    nextLabel: string,
+  ) => {
+    const trimmedLabel = nextLabel.trim();
+    const currentOption = options.find((option) => option.id === optionId);
+
+    if (!isDefined(currentOption) || trimmedLabel.length === 0) {
+      return;
+    }
+
+    const nextOptions = options.map((option) =>
+      option.id === optionId ? { ...option, label: trimmedLabel } : option,
+    );
+
+    if (await onUpdateSelectOptions(field, nextOptions)) {
+      setOptions(nextOptions);
+    }
+  };
+
+  const handleAddOption = async () => {
+    const trimmedLabel = newOptionLabel.trim();
+
+    if (trimmedLabel.length === 0) {
+      return;
+    }
+
+    const value = camelCase(trimmedLabel).toUpperCase();
+
+    if (options.some((option) => option.value === value)) {
+      return;
+    }
+
+    const nextOptions = [
+      ...options,
+      {
+        id: v4(),
+        label: trimmedLabel,
+        value,
+        position: options.length,
+        color: 'gray' as const,
+      },
+    ];
+
+    if (await onUpdateSelectOptions(field, nextOptions)) {
+      setOptions(nextOptions);
+      setNewOptionLabel('');
+    }
+  };
+
+  const handleRemoveOption = async (optionId: string) => {
+    const nextOptions = options
+      .filter((option) => option.id !== optionId)
+      .map((option, position) => ({ ...option, position }));
+
+    if (await onUpdateSelectOptions(field, nextOptions)) {
+      setOptions(nextOptions);
+    }
+  };
+
+  const handleUpdateOption = async (
+    optionId: string,
+    update: (option: FieldMetadataItemOption) => FieldMetadataItemOption,
+  ) => {
+    const nextOptions = options.map((option) =>
+      option.id === optionId ? update(option) : option,
+    );
+
+    if (await onUpdateSelectOptions(field, nextOptions)) {
+      setOptions(nextOptions);
+    }
+  };
+
+  const handleMoveOption = async (optionId: string, direction: -1 | 1) => {
+    const optionIndex = options.findIndex((option) => option.id === optionId);
+    const nextIndex = optionIndex + direction;
+
+    if (optionIndex < 0 || nextIndex < 0 || nextIndex >= options.length) {
+      return;
+    }
+
+    const reorderedOptions = [...options];
+    [reorderedOptions[optionIndex], reorderedOptions[nextIndex]] = [
+      reorderedOptions[nextIndex],
+      reorderedOptions[optionIndex],
+    ];
+    const nextOptions = reorderedOptions.map((option, position) => ({
+      ...option,
+      position,
+    }));
+
+    if (await onUpdateSelectOptions(field, nextOptions)) {
+      setOptions(nextOptions);
+    }
+  };
+
+  return (
+    <StyledFieldRow>
+      <StyledFieldInput
+        aria-label={t`Field name`}
+        value={label}
+        onChange={(event) => setLabel(event.target.value)}
+        onBlur={() => void handleBlur()}
+      />
+      <LightIconButton
+        aria-label={t`Delete field`}
+        size="sm"
+        onClick={onDelete}
+      >
+        <IconTrash />
+      </LightIconButton>
+      <StyledOptionList>
+        <StyledFieldInput
+          aria-label={t`Field description`}
+          placeholder={t`Field description`}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          onBlur={() => void handleDescriptionBlur()}
+        />
+        {field.type === FieldMetadataType.SELECT ? (
+          <StyledSelect
+            aria-label={t`Field default value`}
+            value={defaultValue}
+            onChange={(event) =>
+              void handleImmediateDefaultValueChange(
+                event.target.value,
+                event.target.value.length > 0 ? event.target.value : null,
+              )
+            }
+          >
+            <option value="">{t`No default`}</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </StyledSelect>
+        ) : field.type === FieldMetadataType.BOOLEAN ? (
+          <StyledSelect
+            aria-label={t`Field default value`}
+            value={defaultValue}
+            onChange={(event) =>
+              void handleImmediateDefaultValueChange(
+                event.target.value,
+                event.target.value === '' ? null : event.target.value === 'true',
+              )
+            }
+          >
+            <option value="">{t`No default`}</option>
+            <option value="true">{t`True`}</option>
+            <option value="false">{t`False`}</option>
+          </StyledSelect>
+        ) : (
+          <StyledFieldInput
+            aria-label={t`Field default value`}
+            placeholder={t`Default value`}
+            type={
+              field.type === FieldMetadataType.NUMBER
+                ? 'number'
+                : field.type === FieldMetadataType.DATE
+                  ? 'date'
+                  : 'text'
+            }
+            value={defaultValue}
+            onChange={(event) => setDefaultValue(event.target.value)}
+            onBlur={() => void handleDefaultValueBlur()}
+          />
+        )}
+        {field.type === FieldMetadataType.SELECT && (
+          <div>
+            {options.map((option) => (
+              <StyledOptionRow key={option.id}>
+                <StyledFieldInput
+                  aria-label={t`Select option`}
+                  value={option.label}
+                  onChange={(event) => {
+                    const updatedOptions = options.map((currentOption) =>
+                      currentOption.id === option.id
+                        ? { ...currentOption, label: event.target.value }
+                        : currentOption,
+                    );
+                    setOptions(updatedOptions);
+                  }}
+                  onBlur={(event) =>
+                    void handleOptionLabelChange(option.id, event.target.value)
+                }
+                />
+                <StyledSelect
+                  aria-label={t`Select option color`}
+                  value={option.color}
+                  onChange={(event) =>
+                    void handleUpdateOption(option.id, (currentOption) => ({
+                      ...currentOption,
+                      color: event.target.value as ThemeColor,
+                    }))
+                  }
+                >
+                  {MAIN_COLOR_NAMES.map((color) => (
+                    <option key={color} value={color}>
+                      {color}
+                    </option>
+                  ))}
+                </StyledSelect>
+                <LightIconButton
+                  aria-label={t`Move select option up`}
+                  size="sm"
+                  disabled={options[0]?.id === option.id}
+                  onClick={() => void handleMoveOption(option.id, -1)}
+                >
+                  <IconChevronUp />
+                </LightIconButton>
+                <LightIconButton
+                  aria-label={t`Move select option down`}
+                  size="sm"
+                  disabled={options.at(-1)?.id === option.id}
+                  onClick={() => void handleMoveOption(option.id, 1)}
+                >
+                  <IconChevronDown />
+                </LightIconButton>
+                <LightIconButton
+                  aria-label={t`Remove select option`}
+                  size="sm"
+                  onClick={() => void handleRemoveOption(option.id)}
+                >
+                  <IconTrash />
+                </LightIconButton>
+              </StyledOptionRow>
+            ))}
+            <StyledAddOptionRow>
+              <StyledFieldInput
+                aria-label={t`New select option`}
+                placeholder={t`Add option`}
+                value={newOptionLabel}
+                onChange={(event) => setNewOptionLabel(event.target.value)}
+              />
+              <LightIconButton
+                aria-label={t`Add select option`}
+                size="sm"
+                disabled={newOptionLabel.trim().length === 0}
+                onClick={() => void handleAddOption()}
+              >
+                <IconPlus />
+              </LightIconButton>
+            </StyledAddOptionRow>
+          </div>
+        )}
+      </StyledOptionList>
+    </StyledFieldRow>
+  );
+};

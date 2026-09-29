@@ -1,0 +1,38 @@
+import { useMutation } from '@apollo/client/react';
+
+import { REMOVE_RECORDS_FROM_LIST } from '../graphql/mutations/removeRecordsFromList';
+import { evictRecordListEntriesFromCache } from '../utils/evictRecordListEntriesFromCache';
+
+type RemoveRecordsFromListResult = {
+  removedCount: number;
+  skippedCount: number;
+};
+
+export const useRemoveRecordsFromList = () => {
+  const [removeMutation, mutationState] = useMutation<
+    { removeRecordsFromList: RemoveRecordsFromListResult },
+    { recordListId: string; entryIds: string[] }
+  >(REMOVE_RECORDS_FROM_LIST);
+
+  const removeRecordsFromList = async ({
+    recordListId,
+    entryIds,
+  }: {
+    recordListId: string;
+    entryIds: string[];
+  }) => {
+    const result = await removeMutation({
+      variables: { recordListId, entryIds },
+      update: (cache) => {
+        evictRecordListEntriesFromCache(cache, recordListId);
+      },
+    });
+
+    return result.data?.removeRecordsFromList;
+  };
+
+  return {
+    removeRecordsFromList,
+    isRemovingRecords: mutationState.loading,
+  };
+};

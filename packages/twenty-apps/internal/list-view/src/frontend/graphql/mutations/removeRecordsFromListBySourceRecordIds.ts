@@ -1,0 +1,16 @@
+import { gql } from '@apollo/client';
+
+export const REMOVE_RECORDS_FROM_LIST_BY_SOURCE_RECORD_IDS = gql`
+  mutation RemoveRecordsFromListBySourceRecordIds(
+    $recordListId: UUID!
+    $sourceRecordIds: [UUID!]!
+  ) {
+    removeRecordsFromListBySourceRecordIds(
+      recordListId: $recordListId
+      sourceRecordIds: $sourceRecordIds
+    ) {
+      removedCount
+      skippedCount
+    }
+  }
+`;

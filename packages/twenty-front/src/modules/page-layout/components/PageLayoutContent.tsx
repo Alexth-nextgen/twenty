@@ -23,7 +23,8 @@ const StyledEmptyStandalonePageContainer = styled.div`
 export const PageLayoutContent = () => {
   const isPageLayoutInEditMode = useIsPageLayoutInEditMode();
 
-  const { layoutMode, tabId } = usePageLayoutContentContext();
+  const { contentAfterWidget, layoutMode, tabId } =
+    usePageLayoutContentContext();
 
   const activeTab = usePageLayoutTabWithVisibleWidgetsOrThrow(tabId);
   const firstWidget = activeTab.widgets[0];
@@ -55,6 +56,7 @@ export const PageLayoutContent = () => {
     <PageLayoutVerticalList
       isInEditMode={isPageLayoutInEditMode && isRecordPageLayout}
       widgets={activeTab.widgets}
+      contentAfterWidget={contentAfterWidget}
       leadingElement={
         isRecordPageLayout &&
         isDefined(firstWidget) &&

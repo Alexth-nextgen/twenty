@@ -10,6 +10,8 @@ import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/
 import { useTargetRecord } from '@/ui/layout/contexts/useTargetRecord';
 import { ScrollWrapper } from '@/ui/utilities/scroll/components/ScrollWrapper';
 import { styled } from '@linaria/react';
+import { type ReactNode } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 import { PageLayoutType } from '~/generated-metadata/graphql';
 import { themeCssVariables } from 'twenty-ui/theme';
 
@@ -34,11 +36,13 @@ const StyledContainer = styled.div`
 type PageLayoutLeftPanelProps = {
   pageLayoutId: string;
   pinnedLeftTabId: string;
+  contentTrailingElement?: ReactNode;
 };
 
 export const PageLayoutLeftPanel = ({
   pageLayoutId,
   pinnedLeftTabId,
+  contentTrailingElement,
 }: PageLayoutLeftPanelProps) => {
   const { currentPageLayout } = useCurrentPageLayout();
   const targetRecordIdentifier = useTargetRecord();
@@ -78,6 +82,14 @@ export const PageLayoutLeftPanel = ({
           tabId: pinnedLeftTabId,
           layoutMode,
           presentation: 'stack',
+          ...(isDefined(contentTrailingElement)
+            ? {
+                contentAfterWidget: {
+                  widgetTitle: 'Opportunities',
+                  element: contentTrailingElement,
+                },
+              }
+            : {}),
         }}
       >
         <ScrollWrapper
